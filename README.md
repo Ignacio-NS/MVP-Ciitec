@@ -3,15 +3,30 @@
 Aplicación web interna on-premise que **lee** documentos heterogéneos (PDF, Word,
 Excel, correos, bitácoras), extrae hechos con LLM, genera un **briefing
 institucional** versionado y trazable, detecta inconsistencias y lo exporta a
-PDF/Word/texto. Monorepo, arquitectura en capas, LLM tras una interfaz pluggable
-(por defecto GitHub Models `gpt-4o`; intercambiable por Groq o modelo local).
+PDF/Word/texto/PPTX. Monorepo, arquitectura en capas, LLM tras una interfaz pluggable
+(por defecto DeepSeek `deepseek-chat`; intercambiable por Gemini, GitHub Models, Groq o modelo local).
 
 ## Levantar en local
 
+Requisitos: Docker Desktop instalado y corriendo.
+
 ```bash
-cp .env.example .env          # completar GEMINI_API_KEY, JWT_SECRET, ENCRYPTION_KEY
-#   ENCRYPTION_KEY: 32 bytes base64, p.ej.  openssl rand -base64 32
-make certs                    # certificados TLS self-signed (Windows: scripts/gen_certs.ps1)
+cp .env.example .env          # copiar plantilla de variables
+```
+
+Editar `.env` y completar como mínimo:
+
+- `DEEPSEEK_API_KEY`: clave de https://platform.deepseek.com/api_keys (sin esto,
+  la generación de briefings con IA falla; el resto de la app funciona igual).
+- `JWT_SECRET`: string largo y aleatorio.
+- `ENCRYPTION_KEY`: 32 bytes en base64, p.ej. `openssl rand -base64 32`.
+- Opcional pero recomendado: cambiar los `..._PASSWORD=cambiar_en_local`.
+
+Luego:
+
+```bash
+make certs                    # certificados TLS self-signed
+#   Windows sin make: powershell -ExecutionPolicy Bypass -File scripts/gen_certs.ps1
 docker compose up --build     # levanta db, redis, minio, openldap, api, worker, beat, frontend, nginx
 ```
 
@@ -62,9 +77,10 @@ auditor/seguridad/admin.
 
 - **Proveedor LLM (intercambiable):** `LLM_PROVIDER` selecciona el back-end sin
   tocar el resto del código:
-  - `gemini` (por defecto): Gemini vía endpoint OpenAI-compatible (`GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.1-pro`). Key en https://aistudio.google.com/apikey.
-  - `github`: GitHub Models, `openai/gpt-4o` (`GITHUB_TOKEN` = PAT con permiso Models).
-  - `groq`: Groq Llama 3.3 70B (`GROQ_API_KEY`, `GROQ_MODEL=llama-3.3-70b-versatile`).
+  - `deepseek` (por defecto): DeepSeek vía endpoint OpenAI-compatible (`DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL=deepseek-chat`). Key en https://platform.deepseek.com/api_keys.
+  - `gemini` (legado): Gemini vía endpoint OpenAI-compatible (`GEMINI_API_KEY`, `GEMINI_MODEL=gemini-2.5-flash`). Key en https://aistudio.google.com/apikey.
+  - `github` (legado): GitHub Models, `openai/gpt-4o` (`GITHUB_TOKEN` = PAT con permiso Models).
+  - `groq` (legado): Groq Llama 3.3 70B (`GROQ_API_KEY`, `GROQ_MODEL=llama-3.3-70b-versatile`).
   - `local`: modelo on-premise (clasificación de datos); implementar `LocalLLMProvider`.
 - **Plantilla pixel-perfect (RF-008):** dos modos (`EXPORT_STYLE`):
   - `overlay` (por defecto): usa las **6 PNG** de `backend/app/templates/` como
