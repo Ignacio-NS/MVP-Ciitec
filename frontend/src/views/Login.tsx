@@ -39,7 +39,7 @@ export default function Login() {
             institucional
           </h1>
           <p className="login__tagline">
-            Sistema de Síntesis Automática de Briefings — Centro de Investigación e Innovación
+            Sistema de Síntesis Automática de SITREP — Centro de Investigación e Innovación
             Tecnológica del Ejército (CIITEC).
           </p>
         </div>
@@ -57,7 +57,7 @@ export default function Login() {
               <Icon name="shield" />
             </div>
             <div>
-              <div className="brand__name">Síntesis de Briefings</div>
+              <div className="brand__name">Síntesis de SITREP</div>
               <div className="brand__sub">CIITEC</div>
             </div>
           </div>

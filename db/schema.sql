@@ -21,7 +21,7 @@ CREATE TYPE estado_hecho        AS ENUM ('ABIERTO', 'EN_CURSO', 'CERRADO');     
 CREATE TYPE estado_briefing     AS ENUM ('BORRADOR', 'APROBADO');               -- RF-007
 CREATE TYPE tipo_inconsistencia AS ENUM ('DUPLICADO', 'CONTRADICCION', 'DESACTUALIZADO', 'INCOMPLETO'); -- RF-005
 CREATE TYPE formato_export      AS ENUM ('PDF', 'WORD', 'TEXTO');               -- RF-008
-CREATE TYPE accion_audit        AS ENUM ('LOGIN', 'INGESTA', 'GENERACION', 'APROBACION',
+CREATE TYPE accion_audit        AS ENUM ('LOGIN', 'INGESTA', 'GENERACION', 'EDICION', 'APROBACION',
                                          'EXPORTACION', 'CONSULTA_CLASIFICADA', 'RECONSTRUCCION'); -- RNF-003
 
 -- =====================================================================

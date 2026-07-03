@@ -9,7 +9,7 @@ PDF/Word/texto. Monorepo, arquitectura en capas, LLM tras una interfaz pluggable
 ## Levantar en local
 
 ```bash
-cp .env.example .env          # completar GROQ_API_KEY, JWT_SECRET, ENCRYPTION_KEY
+cp .env.example .env          # completar GEMINI_API_KEY, JWT_SECRET, ENCRYPTION_KEY
 #   ENCRYPTION_KEY: 32 bytes base64, p.ej.  openssl rand -base64 32
 make certs                    # certificados TLS self-signed (Windows: scripts/gen_certs.ps1)
 docker compose up --build     # levanta db, redis, minio, openldap, api, worker, beat, frontend, nginx
@@ -62,7 +62,8 @@ auditor/seguridad/admin.
 
 - **Proveedor LLM (intercambiable):** `LLM_PROVIDER` selecciona el back-end sin
   tocar el resto del código:
-  - `github` (por defecto): GitHub Models, `openai/gpt-4o` (`GITHUB_TOKEN` = PAT con permiso Models).
+  - `gemini` (por defecto): Gemini vía endpoint OpenAI-compatible (`GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.1-pro`). Key en https://aistudio.google.com/apikey.
+  - `github`: GitHub Models, `openai/gpt-4o` (`GITHUB_TOKEN` = PAT con permiso Models).
   - `groq`: Groq Llama 3.3 70B (`GROQ_API_KEY`, `GROQ_MODEL=llama-3.3-70b-versatile`).
   - `local`: modelo on-premise (clasificación de datos); implementar `LocalLLMProvider`.
 - **Plantilla pixel-perfect (RF-008):** dos modos (`EXPORT_STYLE`):

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./auth";
 import { useTheme } from "./theme";
@@ -8,29 +7,14 @@ import Login from "./views/Login";
 import Cargar from "./views/Cargar";
 import Briefings from "./views/Briefings";
 import Briefing from "./views/Briefing";
+import Fuente from "./views/Fuente";
 import Auditoria from "./views/Auditoria";
 
 const ROLES_AUDITORIA = ["Auditor", "Oficial de Seguridad", "Administrador del Sistema"];
 
-function useOnline() {
-  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
-  useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
-    return () => {
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
-    };
-  }, []);
-  return online;
-}
-
 function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { tema, alternar } = useTheme();
-  const online = useOnline();
   const esAuditor = user?.roles.some((r) => ROLES_AUDITORIA.includes(r));
   const nivel = (user?.nivel_habilitacion || "RESERVADO").toUpperCase();
   const navCls = ({ isActive }: { isActive: boolean }) => "topnav__item" + (isActive ? " is-active" : "");
@@ -49,7 +33,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Icon name="shield" />
           </div>
           <div>
-            <div className="brand__name">★ Síntesis de Briefings</div>
+            <div className="brand__name">★ Síntesis de SITREP</div>
             <div className="brand__sub">CIITEC</div>
           </div>
         </div>
@@ -61,7 +45,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
           <NavLink to="/briefings" className={navCls}>
             <Icon name="list" />
-            Briefings
+            SITREP
           </NavLink>
           {esAuditor && (
             <NavLink to="/auditoria" className={navCls}>
@@ -72,11 +56,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="topbar__spacer" />
-
-        <div className={"conn" + (online ? "" : " is-off")} title={online ? "Conectado" : "Sin conexión"}>
-          <span className="conn__led" />
-          <span>{online ? "EN LÍNEA" : "OFFLINE"}</span>
-        </div>
 
         <div
           className={"toggle" + (tema === "dark" ? " is-on" : "")}
@@ -129,6 +108,7 @@ export default function App() {
       <Route path="/cargar" element={<Protected><Cargar /></Protected>} />
       <Route path="/briefings" element={<Protected><Briefings /></Protected>} />
       <Route path="/briefings/:id" element={<Protected><Briefing /></Protected>} />
+      <Route path="/fuentes/:id" element={<Protected><Fuente /></Protected>} />
       <Route path="/auditoria" element={<Protected><Auditoria /></Protected>} />
       <Route path="*" element={<Navigate to="/briefings" replace />} />
     </Routes>

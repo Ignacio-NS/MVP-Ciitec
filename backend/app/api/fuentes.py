@@ -97,6 +97,27 @@ def detalle(fuente_id: str, user: CurrentUser = Depends(get_current_user), db: S
     return _fuente_dict(f)
 
 
+@router.get("/{fuente_id}/texto")
+def texto(fuente_id: str, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Texto extraído de la fuente, para visualizarlo dentro de la app (trazabilidad RF-006).
+
+    Gateado por nivel/unidad y auditado como CONSULTA_CLASIFICADA vía exigir_nivel.
+    """
+    f = db.get(Fuente, uuid.UUID(fuente_id))
+    if f is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fuente no encontrada")
+    exigir_nivel(db, user, f.nivel_clasificacion, entidad_tipo="fuente", entidad_id=str(f.id), unidad_recurso=f.unidad)
+    return {
+        "id": str(f.id),
+        "nombre_archivo": f.nombre_archivo,
+        "tipo": f.tipo,
+        "nivel_clasificacion": f.nivel_clasificacion,
+        "unidad": f.unidad,
+        "estado": f.estado,
+        "texto_extraido": f.texto_extraido or "",
+    }
+
+
 @router.get("/{fuente_id}/descargar")
 def descargar(fuente_id: str, user: CurrentUser = Depends(get_current_user), db: Session = Depends(get_db)):
     f = db.get(Fuente, uuid.UUID(fuente_id))

@@ -19,7 +19,7 @@ from . import audit, progress, storage
 from .config import settings
 from .db import SessionLocal
 from .llm.provider import get_llm_provider
-from .models import Fuente, Hecho, Inconsistencia
+from .models import Fuente, Hecho, Inconsistencia, VersionBulletHecho
 from .pipeline import deteccion, extraccion, ingesta, sintesis
 
 celery_app = Celery(
@@ -57,6 +57,22 @@ def procesar_fuente(fuente_id: str, task_id: str) -> str | None:
             data = storage.get_bytes(fuente.objeto_minio)
             texto = ingesta.extraer_texto(data, fuente.tipo, fuente.nombre_archivo)
             fuente.texto_extraido = texto
+
+            # Idempotencia (RF-003): reprocesar una fuente REEMPLAZA sus hechos en vez de
+            # acumularlos. Evita que un reintento/redelivery de Celery multiplique los hechos
+            # y dispare falsos DUPLICADO/DESACTUALIZADO/INCOMPLETO. No se tocan los hechos ya
+            # vinculados a una versión: su trazabilidad (RF-006) es append-only e inmutable.
+            previos = [hid for (hid,) in db.query(Hecho.id).filter(Hecho.fuente_id == fuente.id).all()]
+            if previos:
+                referenciados = {
+                    hid
+                    for (hid,) in db.query(VersionBulletHecho.hecho_id)
+                    .filter(VersionBulletHecho.hecho_id.in_(previos))
+                    .all()
+                }
+                borrables = [hid for hid in previos if hid not in referenciados]
+                if borrables:
+                    db.query(Hecho).filter(Hecho.id.in_(borrables)).delete(synchronize_session=False)
 
             provider = get_llm_provider()
             for h in extraccion.extraer(texto, provider):
@@ -97,7 +113,8 @@ def consolidar_briefing(
         provider = get_llm_provider()
 
         progress.publicar(task_id, {"etapa": "detectando", "total_hechos": len(hechos)})
-        for inc in deteccion.detectar(db, hechos, provider):
+        inconsistencias, hechos_unicos = deteccion.detectar(db, hechos, provider)
+        for inc in inconsistencias:
             db.add(
                 Inconsistencia(
                     briefing_id=briefing_id,
@@ -111,8 +128,10 @@ def consolidar_briefing(
 
         progress.publicar(task_id, {"etapa": "sintetizando"})
         try:
+            # Se sintetiza sobre los hechos ya deduplicados (un representante por clúster),
+            # para que el LLM no reciba copias casi idénticas del mismo dato.
             version = sintesis.sintetizar(
-                db, briefing_id=briefing_id, hechos=hechos, fuente_ids=ids,
+                db, briefing_id=briefing_id, hechos=hechos_unicos, fuente_ids=ids,
                 provider=provider, generado_por=generado_por, parametros=parametros,
             )
             db.commit()

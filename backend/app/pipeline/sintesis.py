@@ -11,12 +11,27 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..llm.provider import LLMProvider
 from ..models import BriefingVersion, Fuente, Hecho, VersionBulletHecho
 
-# Tope de contexto crudo que se entrega a la síntesis para rellenar cifras
-# institucionales (personal, logística, meteo) que la extracción de hechos no captura.
-_MAX_CONTEXTO = 8000
+
+def _select_hechos(hechos: list[Hecho], limite: int) -> list[Hecho]:
+    """Acota los hechos enviados a la síntesis para no exceder el contexto del LLM.
+
+    Si hay más de `limite`, prioriza los más relevantes: estado ABIERTO/EN_CURSO
+    primero, luego los más recientes por `ocurrido_en`.
+    """
+    if limite <= 0 or len(hechos) <= limite:
+        return hechos
+    prioridad = {"ABIERTO": 0, "EN_CURSO": 1}
+
+    def clave(h: Hecho):
+        p = prioridad.get((h.estado or "").upper(), 2)
+        ts = h.ocurrido_en.timestamp() if h.ocurrido_en else float("-inf")
+        return (p, -ts)  # menor prioridad primero; dentro, más reciente primero
+
+    return sorted(hechos, key=clave)[:limite]
 
 
 def _hechos_payload(hechos: list[Hecho]) -> list[dict[str, Any]]:
@@ -49,13 +64,23 @@ def sintetizar(
     # las casillas numéricas institucionales que no son "hechos" (RF-004).
     params = dict(parametros or {})
     if fuente_ids:
-        textos = db.execute(
-            select(Fuente.texto_extraido).where(Fuente.id.in_(fuente_ids))
-        ).scalars().all()
-        contexto = "\n---\n".join(t for t in textos if t)
-        params["contexto_fuentes"] = contexto[:_MAX_CONTEXTO]
+        # Presupuesto POR archivo (no solo los primeros chars del primer archivo) para que
+        # TODAS las fuentes aporten cifras (personal, logística, meteo). Se antepone el
+        # nombre del archivo para que la síntesis pueda atribuir cada dato (RF-004).
+        filas = db.execute(
+            select(Fuente.nombre_archivo, Fuente.texto_extraido).where(Fuente.id.in_(fuente_ids))
+        ).all()
+        por_fuente = settings.synth_max_chars_por_fuente
+        bloques = [
+            f"[{nombre}]\n{(texto or '')[:por_fuente]}"
+            for nombre, texto in filas
+            if texto
+        ]
+        contexto = "\n---\n".join(bloques)
+        params["contexto_fuentes"] = contexto[: settings.synth_max_contexto_chars]
 
-    contenido = provider.sintetizar_briefing(_hechos_payload(hechos), params)
+    hechos_sel = _select_hechos(hechos, settings.synth_max_hechos)
+    contenido = provider.sintetizar_briefing(_hechos_payload(hechos_sel), params)
 
     # numero_version siguiente (append-only, RF-007)
     actual = db.execute(

@@ -25,15 +25,49 @@ from ..models import (
     BriefingVersion,
     Exportacion,
     Fuente,
+    Hecho,
     Inconsistencia,
     VersionBulletHecho,
 )
 from ..pipeline import exportacion
-from ..schemas.api import CrearBriefingIn, ExportarIn
+from ..schemas.api import CrearBriefingIn, EditarVersionIn, ExportarIn
 from ..worker import lanzar_generacion
 from .seguridad import exigir_nivel
 
 router = APIRouter(prefix="/briefings", tags=["briefings"])
+
+
+def _hechos_detalle(db: Session, ids: list[str]) -> dict[str, dict]:
+    """Resuelve hecho_ids → detalle legible (evento + archivo origen) en UNA consulta.
+
+    Evita N+1 y permite que el front muestre texto y nombre de archivo en vez de UUIDs
+    (inconsistencias RF-005, trazabilidad RF-006).
+    """
+    uids = []
+    for x in ids:
+        try:
+            uids.append(uuid.UUID(str(x)))
+        except (ValueError, AttributeError, TypeError):
+            continue
+    if not uids:
+        return {}
+    filas = db.execute(
+        select(
+            Hecho.id, Hecho.evento, Hecho.ocurrido_en, Hecho.texto_origen,
+            Fuente.id.label("fuente_id"), Fuente.nombre_archivo,
+        ).join(Fuente, Fuente.id == Hecho.fuente_id).where(Hecho.id.in_(uids))
+    ).all()
+    return {
+        str(r.id): {
+            "id": str(r.id),
+            "evento": r.evento,
+            "ocurrido_en": r.ocurrido_en.isoformat() if r.ocurrido_en else None,
+            "texto_origen": r.texto_origen or "",
+            "fuente_id": str(r.fuente_id),
+            "fuente_nombre": r.nombre_archivo,
+        }
+        for r in filas
+    }
 
 
 def _version_activa(db: Session, briefing_id, at: datetime | None = None) -> BriefingVersion | None:
@@ -162,7 +196,7 @@ def version_n(briefing_id: str, numero: int, user: CurrentUser = Depends(get_cur
         BriefingVersion.briefing_id == b.id, BriefingVersion.numero_version == numero)).scalar_one_or_none()
     if v is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Versión no encontrada")
-    return {"numero_version": v.numero_version, "contenido": v.contenido,
+    return {"id": str(v.id), "numero_version": v.numero_version, "contenido": v.contenido,
             "creado_en": v.creado_en.isoformat() if v.creado_en else None}
 
 
@@ -183,6 +217,65 @@ def diff(briefing_id: str, a: int, b: int, user: CurrentUser = Depends(get_curre
     izq, der = _contenido(a), _contenido(b)
     delta = list(difflib.unified_diff(izq, der, fromfile=f"v{a}", tofile=f"v{b}", lineterm=""))
     return {"desde": a, "hasta": b, "diff": delta}
+
+
+# ---------------- Edición manual (RF-007) ----------------
+@router.post("/{briefing_id}/versiones")
+def editar_version(
+    briefing_id: str,
+    body: EditarVersionIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Guarda el contenido editado como una versión NUEVA (append-only, RF-007).
+
+    Nunca se sobreescribe una versión existente: editar v2 y guardar produce v3.
+    La trazabilidad bullet -> hecho se copia desde la versión base (RF-006).
+    """
+    b = db.get(Briefing, uuid.UUID(briefing_id))
+    if b is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Briefing no encontrado")
+    exigir_nivel(db, user, b.nivel_clasificacion, entidad_tipo="briefing", entidad_id=str(b.id), unidad_recurso=b.unidad)
+    if not body.contenido:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El contenido editado no puede estar vacío")
+
+    if body.base_version is not None:
+        base = db.execute(select(BriefingVersion).where(
+            BriefingVersion.briefing_id == b.id,
+            BriefingVersion.numero_version == body.base_version)).scalar_one_or_none()
+        if base is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Versión base {body.base_version} no existe")
+    else:
+        base = _version_activa(db, b.id)
+    if base is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El briefing aún no tiene una versión que editar")
+
+    ultima = db.execute(
+        select(BriefingVersion).where(BriefingVersion.briefing_id == b.id)
+        .order_by(desc(BriefingVersion.numero_version)).limit(1)
+    ).scalar_one()
+    version = BriefingVersion(
+        briefing_id=b.id,
+        numero_version=ultima.numero_version + 1,
+        contenido=body.contenido,
+        comentario_cambio=body.comentario or f"Edición manual (basada en v{base.numero_version})",
+        fuentes_agregadas=base.fuentes_agregadas or [],
+        generado_por=uuid.UUID(user.id),
+    )
+    db.add(version)
+    db.flush()
+    # La nueva versión conserva los vínculos bullet -> hecho de la versión base (RF-006).
+    trazas = db.execute(select(VersionBulletHecho).where(VersionBulletHecho.version_id == base.id)).scalars().all()
+    for t in trazas:
+        db.add(VersionBulletHecho(version_id=version.id, bullet_key=t.bullet_key, hecho_id=t.hecho_id))
+    b.estado = "BORRADOR"  # una edición posterior a la aprobación requiere re-aprobar
+    db.commit()
+    audit.registrar(db, accion="EDICION", actor_id=user.id, entidad_tipo="version",
+                    entidad_id=str(version.id),
+                    detalle={"version": version.numero_version, "base": base.numero_version},
+                    nivel_afectado=b.nivel_clasificacion)
+    return {"version_id": str(version.id), "numero_version": version.numero_version,
+            "base": base.numero_version, "estado": b.estado}
 
 
 # ---------------- Aprobación (RF-007) ----------------
@@ -215,9 +308,12 @@ def inconsistencias(briefing_id: str, user: CurrentUser = Depends(get_current_us
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Briefing no encontrado")
     exigir_nivel(db, user, b.nivel_clasificacion, entidad_tipo="briefing", entidad_id=str(b.id), unidad_recurso=b.unidad)
     filas = db.execute(select(Inconsistencia).where(Inconsistencia.briefing_id == uuid.UUID(briefing_id))).scalars().all()
+    todos_ids = [hid for i in filas for hid in (i.hechos_involucrados or [])]
+    detalle = _hechos_detalle(db, todos_ids)
     return {"inconsistencias": [{
         "id": str(i.id), "tipo": i.tipo, "severidad": i.severidad,
         "descripcion": i.descripcion, "hechos_involucrados": i.hechos_involucrados,
+        "hechos": [detalle[str(h)] for h in (i.hechos_involucrados or []) if str(h) in detalle],
         "resuelto": i.resuelto,
     } for i in filas]}
 
@@ -233,8 +329,10 @@ def trazabilidad(briefing_id: str, user: CurrentUser = Depends(get_current_user)
     if v is None:
         return {"trazas": []}
     filas = db.execute(select(VersionBulletHecho).where(VersionBulletHecho.version_id == v.id)).scalars().all()
+    detalle = _hechos_detalle(db, [str(t.hecho_id) for t in filas])
     return {"version": v.numero_version, "trazas": [
-        {"bullet_key": t.bullet_key, "hecho_id": str(t.hecho_id)} for t in filas
+        {"bullet_key": t.bullet_key, "hecho_id": str(t.hecho_id), "hecho": detalle.get(str(t.hecho_id))}
+        for t in filas
     ]}
 
 

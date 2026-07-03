@@ -13,7 +13,7 @@ from .api import audit, auth, briefings, fuentes, ws
 from .auth.tokens import decodificar_token, renovar_token
 from .storage import ensure_bucket
 
-app = FastAPI(title="Síntesis Automática de Briefings — CIITEC", version="1.0.0")
+app = FastAPI(title="Síntesis Automática de SITREP — CIITEC", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

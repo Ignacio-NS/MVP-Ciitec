@@ -46,7 +46,7 @@ export default function Briefings() {
       <div className="page-head">
         <div>
           <div className="eyebrow">Repositorio</div>
-          <h1 className="page-title">Briefings</h1>
+          <h1 className="page-title">SITREP</h1>
           <p className="page-sub">
             {cargando ? "Cargando…" : `${filtrados.length} documentos`} · ordenados por fecha de
             creación
@@ -54,7 +54,7 @@ export default function Briefings() {
         </div>
         <Link className="btn btn--primary" to="/cargar">
           <Icon name="plus" />
-          Nuevo briefing
+          Nuevo SITREP
         </Link>
       </div>
 
@@ -100,10 +100,10 @@ export default function Briefings() {
               <Icon name="list-empty" strokeWidth={1.6} />
             </div>
             <div className="empty__title">
-              {items.length === 0 ? "Aún no hay briefings." : "Sin resultados para el filtro."}
+              {items.length === 0 ? "Aún no hay SITREP." : "Sin resultados para el filtro."}
             </div>
             <p style={{ maxWidth: "40ch", margin: "0 auto var(--sp-5)" }}>
-              Cargue documentos fuente y genere el primer briefing institucional del sector.
+              Cargue documentos fuente y genere el primer SITREP institucional del sector.
             </p>
             <Link className="btn btn--primary" to="/cargar">
               <Icon name="upload" />

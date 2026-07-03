@@ -485,9 +485,19 @@ a{color:var(--accent);text-decoration:none}
 .inc-item__desc{font-size:var(--tx-md);margin-top:6px;line-height:1.5}
 
 /* versiones / timeline */
-.ver-row{display:flex;align-items:center;gap:var(--sp-4)}
+.ver-row{display:flex;align-items:center;gap:var(--sp-4);padding:4px 6px;margin:-4px -6px;border-radius:var(--r);transition:background var(--speed)}
+.ver-row:hover{background:var(--surface-2)}
+.ver-row.is-current{background:var(--accent-weak)}
+.ver-row.is-current .ver-dot{border-color:var(--accent)}
 .ver-dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--border-strong);background:var(--surface);flex:none}
 .ver-dot.is-appr{background:var(--ok);border-color:var(--ok)}
+
+/* ---- edición en línea del reporte (crea versiones nuevas, RF-007) ---- */
+textarea.input{height:auto;min-height:60px;padding:8px 12px;resize:vertical;line-height:1.5}
+.ed-bar{position:sticky;top:var(--sp-3);z-index:20;border-color:var(--accent-border)}
+.ed-table td{padding:5px 6px}
+.ed-table .input{height:30px;font-size:var(--tx-sm);padding:0 8px;min-width:90px}
+.ed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sp-3)}
 
 /* point-in-time result */
 .pit-result{margin-top:var(--sp-3);padding:var(--sp-4);border:1px solid var(--accent-border);background:var(--accent-weak);border-radius:var(--r);display:flex;align-items:center;gap:var(--sp-3)}
@@ -569,3 +579,40 @@ a{color:var(--accent);text-decoration:none}
 .gap2{gap:var(--sp-2)}.gap4{gap:var(--sp-4)}
 .mt2{margin-top:var(--sp-2)}.mt4{margin-top:var(--sp-4)}.mt6{margin-top:var(--sp-6)}
 .toolbar{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-4)}
+.gap1{gap:6px}
+
+/* ============================================================
+   TRAZABILIDAD (scroll propio) + INCONSISTENCIAS (agrupadas) + VISTA FUENTE
+   ============================================================ */
+/* Panel de trazabilidad: sticky con scroll propio para que no arrastre toda la página. */
+.trace-panel{display:flex;flex-direction:column;max-height:calc(100vh - 110px)}
+.trace-panel__body{overflow-y:auto}
+.trace-link{cursor:pointer}
+.trace-link__hecho{font-size:var(--tx-sm);color:var(--text-2);line-height:1.4}
+/* trace-id ahora es un botón clickeable (abre la fuente) */
+button.trace-id{cursor:pointer;background:transparent}
+button.trace-id:hover{border-color:var(--accent-border);color:var(--accent);background:var(--accent-weak)}
+
+/* Inconsistencias: lista con scroll propio + chips de archivo origen */
+.inc-scroll{max-height:60vh;overflow-y:auto;padding-right:4px}
+.inc-list{display:flex;flex-direction:column}
+.inc-item__src{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.src-chip{
+  display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  font-family:var(--font-mono);font-size:var(--tx-xs);color:var(--accent);
+  padding:3px 8px;border:1px solid var(--accent-border);border-radius:99px;background:var(--accent-weak);
+}
+.src-chip:hover{background:var(--accent);color:#fff}
+.src-chip svg{width:12px;height:12px}
+
+/* Vista de fuente: texto extraído + cita resaltada */
+.src-text{
+  white-space:pre-wrap;word-break:break-word;font-family:var(--font-mono);
+  font-size:var(--tx-sm);line-height:1.65;color:var(--text);
+  max-height:calc(100vh - 320px);overflow:auto;margin:0;
+}
+.src-cita{background:var(--res-bg);color:var(--res);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px var(--res-border)}
+.src-cita-box{
+  margin:0;padding:11px 14px;border-left:3px solid var(--res);background:var(--res-bg);
+  color:var(--text);border-radius:var(--r);font-size:var(--tx-md);line-height:1.55;
+}

@@ -40,7 +40,7 @@ export default function Cargar() {
   const [files, setFiles] = useState<File[]>([]);
   const [nivel, setNivel] = useState<string>("RESERVADO");
   const [titulo, setTitulo] = useState(
-    "Briefing operacional " + new Date().toLocaleDateString("es-CL")
+    "SITREP operacional " + new Date().toLocaleDateString("es-CL")
   );
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [cola, setCola] = useState(0);
@@ -102,7 +102,7 @@ export default function Cargar() {
       setPhase(5);
       setPipeEstado("ok");
       setGenerando(false);
-      push("✅ Briefing listo.", "ok");
+      push("✅ SITREP listo.", "ok");
       if (d.briefing_id) setBriefingId(String(d.briefing_id));
       return;
     }
@@ -125,7 +125,7 @@ export default function Cargar() {
     else if (etapa === "documento_ok") push("· Documento procesado — " + (d.doc_nombre || ""), "");
     else if (etapa === "detectando")
       push("· Detectando inconsistencias" + (d.total_hechos != null ? ` — ${d.total_hechos} hechos` : ""), "accent");
-    else if (etapa === "sintetizando") push("· Sintetizando briefing institucional", "accent");
+    else if (etapa === "sintetizando") push("· Sintetizando SITREP institucional", "accent");
     else push("· " + etapa, "");
   }
 
@@ -175,7 +175,7 @@ export default function Cargar() {
           /* ignora mensajes no-JSON */
         }
       };
-      ws.onerror = () => push("(WS sin conexión; el briefing igual se está generando)", "warn");
+      ws.onerror = () => push("(WS sin conexión; el SITREP igual se está generando)", "warn");
     } catch (e: any) {
       push("Error: " + (e?.message || e), "err");
       setPipeEstado("err");
@@ -203,7 +203,7 @@ export default function Cargar() {
       <div className="page-head">
         <div>
           <div className="eyebrow">Flujo operativo · Cargar → Generar → Exportar</div>
-          <h1 className="page-title">Cargar documentos y generar briefing</h1>
+          <h1 className="page-title">Cargar documentos y generar SITREP</h1>
         </div>
         <div className="row gap2">
           {!online && (
@@ -349,7 +349,7 @@ export default function Cargar() {
                     {pipeEstado === "ok" && briefingId && (
                       <Link className="btn btn--primary" to={`/briefings/${briefingId}`}>
                         <Icon name="arrow-right" />
-                        Ver briefing generado
+                        Ver SITREP generado
                       </Link>
                     )}
                     {pipeEstado === "err" && (
@@ -373,7 +373,7 @@ export default function Cargar() {
             </div>
             <div className="card__body stack" style={{ gap: "var(--sp-5)" }}>
               <div className="field">
-                <label className="label">Título del briefing</label>
+                <label className="label">Título del SITREP</label>
                 <input
                   className="input"
                   value={titulo}

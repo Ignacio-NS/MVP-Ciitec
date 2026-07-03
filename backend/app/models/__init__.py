@@ -41,7 +41,7 @@ EstadoBriefing = ENUM("BORRADOR", "APROBADO", name="estado_briefing", create_typ
 TipoInconsistencia = ENUM("DUPLICADO", "CONTRADICCION", "DESACTUALIZADO", "INCOMPLETO", name="tipo_inconsistencia", create_type=False)
 FormatoExport = ENUM("PDF", "WORD", "TEXTO", name="formato_export", create_type=False)
 AccionAudit = ENUM(
-    "LOGIN", "INGESTA", "GENERACION", "APROBACION", "EXPORTACION",
+    "LOGIN", "INGESTA", "GENERACION", "EDICION", "APROBACION", "EXPORTACION",
     "CONSULTA_CLASIFICADA", "RECONSTRUCCION",
     name="accion_audit", create_type=False,
 )

@@ -36,3 +36,10 @@ class CrearBriefingIn(BaseModel):
 class ExportarIn(BaseModel):
     formato: str = "PDF"  # PDF | WORD | TEXTO
     version_id: str | None = None
+
+
+class EditarVersionIn(BaseModel):
+    """Edición manual del reporte: el contenido editado se guarda como versión nueva (RF-007)."""
+    contenido: dict
+    base_version: int | None = None  # versión desde la que se editó (default: la activa)
+    comentario: str | None = None

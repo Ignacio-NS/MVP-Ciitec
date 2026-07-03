@@ -50,6 +50,7 @@ export const api = {
   me: () => request("/auth/me"),
 
   listFuentes: () => request("/fuentes"),
+  getFuenteTexto: (id: string) => request(`/fuentes/${id}/texto`),
   upload: (files: File[], nivel = "RESERVADO") => {
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
@@ -62,13 +63,22 @@ export const api = {
   listBriefings: () => request("/briefings"),
   getBriefing: (id: string) => request(`/briefings/${id}`),
   getVersiones: (id: string) => request(`/briefings/${id}/versiones`),
+  getVersion: (id: string, numero: number) => request(`/briefings/${id}/versiones/${numero}`),
+  editarVersion: (id: string, contenido: any, base_version?: number | null, comentario?: string) =>
+    request(`/briefings/${id}/versiones`, {
+      method: "POST",
+      body: JSON.stringify({ contenido, base_version, comentario }),
+    }),
   getDiff: (id: string, a: number, b: number) => request(`/briefings/${id}/diff/${a}/${b}`),
   reconstruir: (id: string, at: string) => request(`/briefings/${id}/versiones?at=${encodeURIComponent(at)}`),
   getInconsistencias: (id: string) => request(`/briefings/${id}/inconsistencias`),
   getTrazabilidad: (id: string) => request(`/briefings/${id}/trazabilidad`),
   aprobar: (versionId: string) => request(`/briefings/versiones/${versionId}/aprobar`, { method: "POST" }),
-  exportar: (id: string, formato: string): Promise<Blob> =>
-    request(`/briefings/${id}/exportar`, { method: "POST", body: JSON.stringify({ formato }) }) as Promise<Blob>,
+  exportar: (id: string, formato: string, version_id?: string | null): Promise<Blob> =>
+    request(`/briefings/${id}/exportar`, {
+      method: "POST",
+      body: JSON.stringify({ formato, version_id }),
+    }) as Promise<Blob>,
 
   getAudit: () => request("/audit"),
   verificarAudit: () => request("/audit/verificar"),

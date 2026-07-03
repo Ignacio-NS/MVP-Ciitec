@@ -18,8 +18,9 @@ alembic
 minio
 
 # --- IA / NLP ---
-openai              # LLM activo: GitHub Models (gpt-4o), API estilo OpenAI
+openai              # LLM activo: Gemini (endpoint OpenAI-compatible); también GitHub Models (gpt-4o)
 groq                # LLM legado: Groq Llama 3.3 70B
+json-repair         # repara JSON truncado del LLM (briefing grande corta al tope de tokens)
 sentence-transformers
 
 # --- Parsers de documentos (RF-001) ---
@@ -37,7 +38,8 @@ passlib[bcrypt]
 cryptography
 
 # --- Exportación (RF-008) ---
-weasyprint          # PDF desde plantilla HTML institucional
+python-pptx         # rellena la plantilla institucional .pptx de 6 páginas (PDF vía LibreOffice)
+weasyprint          # PDF desde plantilla HTML institucional (legado)
 docxtpl             # Word desde plantilla institucional
 matplotlib          # gráficos (donut/barras) server-side a PNG
 

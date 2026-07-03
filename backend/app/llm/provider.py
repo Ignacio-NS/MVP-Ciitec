@@ -1,12 +1,12 @@
 """
 Abstracción del proveedor de LLM.
 
-Toda la lógica del sistema habla con esta interfaz, NUNCA con Groq/OpenAI
-directamente. En el MVP se usa Groq (Llama 3.3 70B); en producción se reemplaza
-por un modelo local (clasificación de datos) implementando LocalLLMProvider y
-seteando LLM_PROVIDER=local, sin tocar el resto del código.
+Toda la lógica del sistema habla con esta interfaz, NUNCA con DeepSeek/Gemini/Groq/OpenAI
+directamente. En el MVP se usa DeepSeek (endpoint OpenAI-compatible, pagado); en producción
+se reemplaza por un modelo local (clasificación de datos) implementando LocalLLMProvider
+y seteando LLM_PROVIDER=local, sin tocar el resto del código.
 
-Groq no garantiza JSON-schema estricto, así que cada método:
+El LLM no garantiza JSON-schema estricto, así que cada método:
   1) pide JSON con prompts MUY explícitos en español,
   2) parsea + valida con Pydantic (schemas/llm.py),
   3) reintenta con backoff exponencial; si agota, propaga LLMError.
@@ -104,10 +104,18 @@ macrozona, operacionalidad/NOP, meteorología, incidentes), ÚSALOS para complet
 institucionales correspondientes; si no aparecen en el contexto ni en los hechos, deja "-.-"."""
 
 _CONTRA_SYS = """Eres un analista de operaciones del Ejército de Chile. Te entrego una lista de
-HECHOS (cada uno con su id). Identifica CONTRADICCIONES entre ellos (afirmaciones
-incompatibles sobre el mismo evento, cifras o estados). Responde SOLO con JSON válido:
+HECHOS (cada uno con su id). Identifica solo CONTRADICCIONES REALES: dos o más hechos que
+describen el MISMO evento/situación pero con datos INCOMPATIBLES entre sí (cifras distintas,
+estados opuestos como ABIERTO vs CERRADO, fechas o ubicaciones que no calzan, afirmaciones
+que se excluyen).
+REGLAS IMPORTANTES:
+- NO marques como contradicción los hechos meramente repetidos o idénticos (eso es duplicado,
+  no contradicción). Si el contenido coincide, NO es contradicción.
+- En "descripcion" explica el conflicto en lenguaje natural claro (qué dato choca con qué),
+  SIN escribir ids ni UUIDs en el texto. Los ids van solo en "hechos_involucrados".
+Responde SOLO con JSON válido:
 {"contradicciones":[{"descripcion":"...","hechos_involucrados":["id1","id2"],"severidad":1}]}
-severidad: 1 baja, 2 media, 3 alta. Si no hay contradicciones, devuelve {"contradicciones": []}."""
+severidad: 1 baja, 2 media, 3 alta. Si no hay contradicciones reales, devuelve {"contradicciones": []}."""
 
 
 class LLMProvider(ABC):
@@ -133,6 +141,27 @@ def _strip_fences(s: str) -> str:
     return s.strip()
 
 
+def _try_repair_json(raw: str) -> dict[str, Any] | None:
+    """Intenta reparar JSON truncado/mal formado (cierra strings y llaves abiertas).
+
+    El briefing institucional es JSON grande y a veces el modelo lo corta al
+    llegar al tope de tokens de salida ("Unterminated string ..."). Como
+    BriefingOut tiene todos los campos con default, un JSON parcial reparado
+    valida igual: se pierde la cola (p.ej. trazabilidad) pero el briefing se
+    genera en vez de fallar por completo.
+    """
+    try:
+        from json_repair import repair_json  # import perezoso
+
+        fixed = repair_json(raw)
+        if not fixed:
+            return None
+        data = json.loads(fixed)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
 class _OpenAICompatProvider(LLMProvider):
     """Base para back-ends con API estilo OpenAI (Groq, GitHub Models).
 
@@ -143,9 +172,10 @@ class _OpenAICompatProvider(LLMProvider):
     client: Any
     model: str
     max_retries: int
+    max_output_tokens: int = settings.llm_max_output_tokens
 
     def _chat_json(self, system: str, user: str) -> dict[str, Any]:
-        """Pide JSON al modelo; reintenta con backoff exponencial."""
+        """Pide JSON al modelo; repara JSON truncado y reintenta con backoff."""
         last_err: Exception | None = None
         for intento in range(self.max_retries):
             try:
@@ -157,10 +187,30 @@ class _OpenAICompatProvider(LLMProvider):
                     ],
                     response_format={"type": "json_object"},
                     temperature=0.1,
+                    max_tokens=self.max_output_tokens,
                 )
-                raw = _strip_fences(resp.choices[0].message.content or "")
-                return json.loads(raw)
-            except Exception as e:  # red, JSON inválido, etc.
+                choice = resp.choices[0]
+                raw = _strip_fences(choice.message.content or "")
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError as e:
+                    # JSON mal formado: intentar reparar (cierra strings/llaves).
+                    reparado = _try_repair_json(raw)
+                    if reparado is not None:
+                        return reparado
+                    # Si vino cortado por el tope de tokens, reintentar idéntico
+                    # vuelve a truncar igual: falla rápido con mensaje claro.
+                    if choice.finish_reason == "length":
+                        raise LLMError(
+                            "El briefing superó el tope de tokens de salida configurado "
+                            f"(llm_max_output_tokens={self.max_output_tokens}) y el JSON "
+                            "truncado no se pudo reparar. Sube llm_max_output_tokens "
+                            "(deepseek-chat admite mucho más) o reduce el alcance."
+                        ) from e
+                    raise
+            except LLMError:
+                raise  # error definitivo (truncación irreparable): no reintentar
+            except Exception as e:  # red, JSON inválido transitorio, etc.
                 last_err = e
                 if intento < self.max_retries - 1:
                     time.sleep(2 ** intento)  # 1s, 2s, 4s...
@@ -193,6 +243,22 @@ class _OpenAICompatProvider(LLMProvider):
             return []  # la detección de contradicciones es best-effort
 
 
+class DeepSeekProvider(_OpenAICompatProvider):
+    """DeepSeek (endpoint OpenAI-compatible) — proveedor activo (pagado)."""
+
+    def __init__(self) -> None:
+        from openai import OpenAI  # import perezoso
+
+        if not settings.deepseek_api_key:
+            raise LLMError("DEEPSEEK_API_KEY no configurada")
+        self.client = OpenAI(
+            base_url=settings.deepseek_base_url,
+            api_key=settings.deepseek_api_key,
+        )
+        self.model = settings.deepseek_model
+        self.max_retries = settings.llm_max_retries
+
+
 class GroqProvider(_OpenAICompatProvider):
     def __init__(self) -> None:
         from groq import Groq  # import perezoso
@@ -204,8 +270,24 @@ class GroqProvider(_OpenAICompatProvider):
         self.max_retries = settings.groq_max_retries
 
 
+class GeminiProvider(_OpenAICompatProvider):
+    """Gemini (Google) vía su endpoint OpenAI-compatible."""
+
+    def __init__(self) -> None:
+        from openai import OpenAI  # import perezoso
+
+        if not settings.gemini_api_key:
+            raise LLMError("GEMINI_API_KEY no configurada")
+        self.client = OpenAI(
+            base_url=settings.gemini_base_url,
+            api_key=settings.gemini_api_key,
+        )
+        self.model = settings.gemini_model
+        self.max_retries = settings.llm_max_retries
+
+
 class GitHubProvider(_OpenAICompatProvider):
-    """GitHub Models (endpoint OpenAI-compatible) — gpt-4o."""
+    """GitHub Models (endpoint OpenAI-compatible) — gpt-4o (legado)."""
 
     def __init__(self) -> None:
         from openai import OpenAI  # import perezoso
@@ -239,4 +321,8 @@ def get_llm_provider() -> LLMProvider:
         return LocalLLMProvider()
     if proveedor == "groq":
         return GroqProvider()
-    return GitHubProvider()  # "github" (por defecto)
+    if proveedor == "github":
+        return GitHubProvider()
+    if proveedor == "gemini":
+        return GeminiProvider()
+    return DeepSeekProvider()  # "deepseek" (por defecto)

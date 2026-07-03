@@ -1,22 +1,41 @@
-FROM python:3.12-slim
+# ---------- builder ----------
+FROM python:3.12-slim AS builder
 
-# Dependencias de sistema para WeasyPrint (PDF), parsers y matplotlib.
-# antiword: extrae texto de .doc binario (Word 97-2003) que python-docx no lee (RF-001).
+# Toolchain solo para compilar wheels en build (no va a la imagen final).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
+        build-essential libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+COPY requirements.txt .
+# Torch CPU-only ANTES de requirements → sentence-transformers NO descarga las wheels
+# NVIDIA CUDA (~5-6GB de peso muerto; la inferencia de embeddings es solo CPU).
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r requirements.txt
+
+# ---------- runtime ----------
+FROM python:3.12-slim AS runtime
+
+# Solo libs de RUNTIME (sin build-essential):
+# WeasyPrint (PDF legado), parsers, matplotlib, antiword (extrae texto de .doc binario,
+# RF-001) y LibreOffice headless (convierte la plantilla .pptx institucional a PDF, RF-008).
+RUN apt-get update && apt-get install -y --no-install-recommends \
         libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
-        libffi-dev libcairo2 libpangoft2-1.0-0 \
+        libcairo2 libpangoft2-1.0-0 libffi8 \
         libjpeg62-turbo zlib1g \
         fonts-dejavu-core \
         antiword \
+        libreoffice-impress \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
 
 EXPOSE 8000
