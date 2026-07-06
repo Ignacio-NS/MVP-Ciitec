@@ -67,7 +67,8 @@ Responde SOLO con un JSON válido (sin preámbulo, sin markdown) con esta estruc
     "parte_fuerza_institucional": {"OF":"-.-","SOF":"-.-","ECP":"-.-","SLTP":"-.-","ESCMIL":"-.-","ESCSOF":"-.-","ESCSERV":"-.-","personal_civil":"-.-","SLC":"-.-","total":"-.-"},
     "slc": {"clase_2006":"-.-","clase_2007":"-.-","total":"-.-"},
     "macrozonas": [{"zona":"...","fuerza":"-.-","forman":"-.-","faltan":"-.-"}],
-    "catastrofe": {"fuerza":"-.-","forman":"-.-","faltan":"-.-"}
+    "catastrofe": {"fuerza":"-.-","forman":"-.-","faltan":"-.-"},
+    "unidades_emergencia": {"ufec":"-.-","brife":"-.-","parme":"-.-"}
   },
   "inteligencia": {
     "incidentes_institucionales": [{"tipo":"...","descripcion":"..."}],
@@ -78,14 +79,15 @@ Responde SOLO con un JSON válido (sin preámbulo, sin markdown) con esta estruc
   },
   "operaciones": {
     "ops_catastrofe": [{"cantidad":"-.-","tipo":"...","unidad_origen":"...","zona_empleo":"...","inicio_empleo":"..."}],
-    "relevos_norte": [{"n":"...","fecha":"...","jaf":"...","unidades":"..."}],
-    "relevos_sur": [{"n":"...","fecha":"...","ft":"...","unidades":"..."}],
+    "relevos_norte": [{"n":"...","fecha":"...","jaf":"...","unidades":"...","periodo":"..."}],
+    "relevos_sur": [{"n":"...","fecha":"...","ft":"...","unidades":"...","periodo":"..."}],
     "ops_antartica": [{"bae":"...","dotacion_estival":"-.-","cpccgu":"..."}],
     "ops_extranjero": [{"operacion":"...","efectivos":"-.-","ubicacion":"...","repliegue":"..."}],
     "guardian_soberano": [{"jaf":"...","fuerza":"-.-","planif":"-.-","ejecut":"-.-"}],
     "unidades_terreno_kpi": {"unidades_en_terreno":"-.-","fuerza_en_terreno":"-.-","lugares_activos":"-.-","actividad_principal":"..."},
     "traslados_uac": [{"uac":"...","unidades":"-.-"}],
-    "unidades_terreno": [{"actividad":"...","comando_matriz":"...","ur":"...","fechas":"...","ubicacion":"...","fuerza":"-.-"}]
+    "unidades_terreno": [{"actividad":"...","comando_matriz":"...","ur":"...","fechas":"...","ubicacion":"...","fuerza":"-.-"}],
+    "despliegue_mapa": {"mzn":"-.-","mzs":"-.-","antartica":"-.-"}
   },
   "logistica": {
     "resumen": {"total":"-.-","nop":"-.-"},
@@ -100,8 +102,12 @@ Cada bullet/casilla con dato debe poder rastrearse a los hechos que lo originan;
 incluye sus ids en "trazabilidad" usando como clave la ruta del bullet (p.ej. "resumen_ejecutivo[0]").
 Donde no haya dato, usa "-.-". No inventes cifras. Mantén entre 5 y 10 bullets en resumen_ejecutivo.
 Si en "parametros.contexto_fuentes" aparecen cifras o datos (personal OF/SOF/ECP/total, fuerzas por
-macrozona, operacionalidad/NOP, meteorología, incidentes), ÚSALOS para completar las casillas
-institucionales correspondientes; si no aparecen en el contexto ni en los hechos, deja "-.-"."""
+macrozona, operacionalidad/NOP con sus categorías campaña/combate/administrativos/eq_ingenieros,
+unidades de emergencia UFEC/BRIFE/PARME, guardián soberano con trabajos de tierra planificados/
+ejecutados, traslados por UAC, despliegue por macrozona MZN/MZS/Antártica, relevos con su periodo,
+meteorología, incidentes), ÚSALOS para completar las casillas institucionales correspondientes;
+si no aparecen en el contexto ni en los hechos, deja "-.-". En "traslados_uac" usa el nombre corto
+de la UAC tal como aparezca en la fuente (p.ej. "I DE", "COPE", "CAF")."""
 
 _CONTRA_SYS = """Eres un analista de operaciones del Ejército de Chile. Te entrego una lista de
 HECHOS (cada uno con su id). Identifica solo CONTRADICCIONES REALES: dos o más hechos que

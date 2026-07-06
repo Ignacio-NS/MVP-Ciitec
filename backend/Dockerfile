@@ -35,6 +35,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Fuentes de la plantilla institucional (Franklin Gothic Medium, Trebuchet MS, Calibri,
+# Times New Roman). Sin ellas LibreOffice sustituye por DejaVu al convertir el PPTX a PDF
+# y cambia la métrica del texto (palabras cortadas / superposiciones en el reporte RF-008).
+COPY app/templates/fonts/ /usr/local/share/fonts/briefing/
+RUN fc-cache -f
+
 WORKDIR /app
 COPY . .
 
