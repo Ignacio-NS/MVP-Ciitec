@@ -54,6 +54,7 @@ export default function Cargar() {
   const [briefingId, setBriefingId] = useState<string | null>(null);
 
   const consoleRef = useRef<HTMLDivElement>(null);
+  const pipeRef = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
 
@@ -72,6 +73,15 @@ export default function Cargar() {
   useEffect(() => {
     consoleRef.current?.scrollTo(0, consoleRef.current.scrollHeight);
   }, [log]);
+
+  // Al iniciar la generación, desplaza la vista al pipeline para ver el progreso.
+  useEffect(() => {
+    if (mostrarPipe) {
+      requestAnimationFrame(() =>
+        pipeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      );
+    }
+  }, [mostrarPipe]);
 
   function push(text: string, kind: LogKind = "") {
     const t = new Date().toLocaleTimeString("es-CL", {
@@ -287,7 +297,7 @@ export default function Cargar() {
 
           {/* ---- pipeline ---- */}
           {mostrarPipe && (
-            <div className="card">
+            <div className="card" ref={pipeRef} style={{ scrollMarginTop: 92 }}>
               <div className="card__head">
                 <div className="card__title">
                   {generando && <span className="spin" />}

@@ -7,6 +7,9 @@ corpus/
 *.pdf
 *.docx
 
+# Fonts propietarias (Calibri/Times/Trebuchet) - no distribuibles en repo público
+backend/app/templates/fonts/
+
 # Python
 __pycache__/
 *.py[cod]

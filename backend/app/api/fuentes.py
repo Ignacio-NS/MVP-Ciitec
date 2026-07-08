@@ -57,6 +57,25 @@ async def subir(
     for file in files:
         data = await file.read()
         sha = hashlib.sha256(data).hexdigest()
+
+        # Dedup por contenido (RF-001): re-subir un archivo idéntico REUTILIZA su fuente en
+        # lugar de crear una fila nueva. Sin esto, cada "Cargar → Generar" clonaba las 10
+        # fuentes; como la generación por defecto corre sobre TODAS las fuentes, el pool de
+        # hechos —y con él las inconsistencias DESACTUALIZADO— crecía en cada reporte.
+        # Se acota a la unidad del usuario para no cruzar la segmentación RBAC (RNF-001).
+        existente = db.execute(
+            select(Fuente).where(Fuente.hash_sha256 == sha, Fuente.unidad == user.unidad)
+        ).scalars().first()
+        if existente is not None:
+            # Se vuelve a marcar PENDIENTE para que la próxima generación la reprocese
+            # (idempotente: reprocesar reemplaza sus hechos no referenciados).
+            existente.estado = "PENDIENTE"
+            existente.nivel_clasificacion = nivel_clasificacion
+            db.commit()
+            db.refresh(existente)
+            creadas.append(_fuente_dict(existente))
+            continue
+
         key = f"{uuid.uuid4()}/{file.filename}"
         storage.put_bytes(key, data, file.content_type or "application/octet-stream")
         f = Fuente(

@@ -14,6 +14,7 @@ from typing import Any
 
 from celery import Celery, chord
 from celery.schedules import crontab
+from sqlalchemy import select
 
 from . import audit, progress, storage
 from .config import settings
@@ -109,7 +110,18 @@ def consolidar_briefing(
     """Filtros 4–5 (cross-doc): detección de inconsistencias + síntesis (RF-004/005/006/007)."""
     ids = [fid for fid in fuente_ids if fid]
     with SessionLocal() as db:
-        hechos = db.query(Hecho).filter(Hecho.fuente_id.in_(ids)).all() if ids else []
+        # Solo los hechos de la extracción ACTUAL: se excluyen los que quedaron ligados a
+        # una versión previa (VersionBulletHecho), que se conservan inmutables solo por
+        # trazabilidad (RF-006). Al reprocesar, cada fuente re-extrae esos mismos hechos como
+        # filas nuevas; contar además las copias históricas inflaba DESACTUALIZADO/DUPLICADO y
+        # rompía la idempotencia (el mismo lote regenerado daba más inconsistencias cada vez).
+        hechos = (
+            db.query(Hecho)
+            .filter(Hecho.fuente_id.in_(ids), Hecho.id.notin_(select(VersionBulletHecho.hecho_id)))
+            .all()
+            if ids
+            else []
+        )
         provider = get_llm_provider()
 
         progress.publicar(task_id, {"etapa": "detectando", "total_hechos": len(hechos)})

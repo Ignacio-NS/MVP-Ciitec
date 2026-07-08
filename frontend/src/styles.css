@@ -159,6 +159,9 @@ a{color:var(--accent);text-decoration:none}
 .toggle::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--slate-400);transition:var(--speed)}
 .toggle.is-on{background:var(--accent);border-color:var(--accent)}
 .toggle.is-on::after{left:22px;background:#fff}
+.themeswitch{display:flex;align-items:center;gap:8px;flex:none}
+.themeswitch__ico{width:16px;height:16px;color:var(--text-muted);opacity:.45;transition:var(--speed)}
+.themeswitch__ico.is-on{opacity:1;color:var(--accent)}
 
 /* ============================================================
    CINTA DE CLASIFICACIÓN GLOBAL

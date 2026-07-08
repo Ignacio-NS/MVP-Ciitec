@@ -60,9 +60,29 @@ export function Tag({ tipo }: { tipo?: string }) {
 }
 
 // ---------- formato ----------
+// El backend entrega los timestamps en UTC (isoformat con offset). Aquí se
+// convierten a hora oficial de Chile (America/Santiago) para mostrarlos, en el
+// mismo formato "YYYY-MM-DD HH:mm" que usa toda la app.
 export function fmtFecha(iso?: string | null): string {
   if (!iso) return "—";
-  return iso.slice(0, 16).replace("T", " ");
+  // Si el string no trae designador de zona, se asume UTC.
+  let s = iso;
+  if (!/[zZ]|[+-]\d\d:?\d\d$/.test(s)) s = s.replace(" ", "T") + "Z";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace("T", " ");
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Santiago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(d)
+    .reduce((acc, x) => ((acc[x.type] = x.value), acc), {} as Record<string, string>);
+  const hora = p.hour === "24" ? "00" : p.hour; // algunos motores devuelven 24 para medianoche
+  return `${p.year}-${p.month}-${p.day} ${hora}:${p.minute}`;
 }
 
 export function fmtTamano(bytes: number): string {

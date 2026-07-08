@@ -46,7 +46,7 @@ export default function Briefings() {
       <div className="page-head">
         <div>
           <div className="eyebrow">Repositorio</div>
-          <h1 className="page-title">SITREP</h1>
+          <h1 className="page-title">Historial de SITREPS</h1>
           <p className="page-sub">
             {cargando ? "Cargando…" : `${filtrados.length} documentos`} · ordenados por fecha de
             creación

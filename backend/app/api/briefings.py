@@ -88,8 +88,16 @@ def crear(body: CrearBriefingIn, user: CurrentUser = Depends(get_current_user), 
                 raise HTTPException(status.HTTP_403_FORBIDDEN, "Fuente fuera de la unidad del usuario")
         fuente_ids = [str(f.id) for f in sel]
     else:
-        q = select(Fuente.id).where(Fuente.estado != "ERROR")
-        # Sin lista explícita: solo las fuentes de la propia unidad (salvo rol transversal).
+        # Sin lista explícita: una fuente por contenido (la más reciente de cada hash). Evita
+        # que copias históricas del mismo archivo —subidas antes del dedup de carga— multipliquen
+        # el pool de hechos y disparen inconsistencias DESACTUALIZADO/DUPLICADO en cada reporte.
+        q = (
+            select(Fuente.id)
+            .where(Fuente.estado != "ERROR")
+            .distinct(Fuente.hash_sha256)
+            .order_by(Fuente.hash_sha256, desc(Fuente.subido_en))
+        )
+        # Solo las fuentes de la propia unidad (salvo rol transversal).
         if not rbac.es_transversal(user.roles):
             q = q.where((Fuente.unidad == user.unidad) | (Fuente.unidad.is_(None)))
         fuente_ids = [str(fid) for fid in db.execute(q).scalars()]

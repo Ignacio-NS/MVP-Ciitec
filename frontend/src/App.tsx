@@ -45,7 +45,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </NavLink>
           <NavLink to="/briefings" className={navCls}>
             <Icon name="list" />
-            SITREP
+            Historial de SITREPS
           </NavLink>
           {esAuditor && (
             <NavLink to="/auditoria" className={navCls}>
@@ -57,21 +57,24 @@ function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="topbar__spacer" />
 
-        <div
-          className={"toggle" + (tema === "dark" ? " is-on" : "")}
-          role="switch"
-          aria-checked={tema === "dark"}
-          aria-label="Modo oscuro"
-          tabIndex={0}
-          title="Modo claro/oscuro"
-          onClick={alternar}
-          onKeyDown={(e) => {
-            if (e.key === " " || e.key === "Enter") {
-              e.preventDefault();
-              alternar();
-            }
-          }}
-        />
+        <div className="themeswitch" title="Modo claro/oscuro">
+          <Icon name="sun" className={"themeswitch__ico" + (tema === "light" ? " is-on" : "")} />
+          <div
+            className={"toggle" + (tema === "dark" ? " is-on" : "")}
+            role="switch"
+            aria-checked={tema === "dark"}
+            aria-label="Modo oscuro"
+            tabIndex={0}
+            onClick={alternar}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                alternar();
+              }
+            }}
+          />
+          <Icon name="moon" className={"themeswitch__ico" + (tema === "dark" ? " is-on" : "")} />
+        </div>
 
         <div className="user">
           <div className="user__id">
