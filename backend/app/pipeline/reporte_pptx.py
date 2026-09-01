@@ -228,6 +228,12 @@ def _items(contenido: dict, path: str) -> list[dict]:
     return [it for it in (_get(contenido, path) or []) if isinstance(it, dict)]
 
 
+def _dget(contenido: dict, path: str) -> dict:
+    """Como _get, pero garantiza dict (el LLM a veces devuelve str/list donde se espera un objeto)."""
+    v = _get(contenido, path)
+    return v if isinstance(v, dict) else {}
+
+
 # ---------------------------------------------------------------------------
 #  Ajuste de tipografía / geometría
 # ---------------------------------------------------------------------------
@@ -812,7 +818,7 @@ def _s0_portada(slide, c: dict) -> None:
     if any(sumas.values()):
         for col, k in enumerate(("fuerza", "forman", "faltan")):
             _cell_value_line(t33.cell(1, col), _miles(sumas[k]), size=8.5)
-    cat = _get(c, "personal.catastrofe") or {}
+    cat = _dget(c, "personal.catastrofe")
     if any(_clean(cat.get(k)) for k in ("fuerza", "forman", "faltan")):
         for col, k in enumerate(("fuerza", "forman", "faltan")):
             _cell_value_line(t33.cell(3, col), _clean(cat.get(k)), size=8.5)
@@ -834,7 +840,7 @@ def _s0_portada(slide, c: dict) -> None:
                      size=10, max_rows=3)
 
     # --- Unidades de emergencia: UFEC / BRIFE / PARME ---
-    ue = _get(c, "personal.unidades_emergencia") or {}
+    ue = _dget(c, "personal.unidades_emergencia")
     _fill_cells(s0["object 3"], {
         (1, 0): _clean(ue.get("ufec")), (1, 1): _clean(ue.get("brife")),
         (1, 2): _clean(ue.get("parme")),
@@ -887,7 +893,7 @@ def _s0_portada(slide, c: dict) -> None:
         _center_title(s0.get(t), pt=18)
 
     # --- Badges del mapa: MZN / MZS / ANTÁRTICA + nº de unidades desplegadas ---
-    mapa = _get(c, "operaciones.despliegue_mapa") or {}
+    mapa = _dget(c, "operaciones.despliegue_mapa")
     for name, label, lbl_pt, key in (("object 24", "MZN", 12, "mzn"),
                                      ("object 32", "MZS", 12, "mzs"),
                                      ("object 25", "ANTÁRTICA", 10.5, "antartica")):
@@ -1191,7 +1197,7 @@ def _s5_logistica(slide, c: dict, fstr: str) -> None:
 
     # TOTAL / NOP: la columna izquierda es una IMAGEN con '389'/'69' de ejemplo horneados.
     # Se blanquean esas casillas en el PNG embebido y se dibujan los valores reales.
-    res = _get(c, "logistica.resumen") or {}
+    res = _dget(c, "logistica.resumen")
     items = _items(c, "logistica.operacionalidad")
     tot = _clean(res.get("total")) or (_miles(sum(_num(i.get("total")) or 0 for i in items))
                                        if items else "")
@@ -1263,7 +1269,7 @@ def _rellenar(slides, c: dict, fecha: datetime) -> None:
 
 def _graficos(prs, slides, c: dict) -> None:
     # --- PORTADA: mini-dona dentro de PARTE DE FUERZA INSTITUCIONAL ---
-    pf = _get(c, "personal.parte_fuerza_institucional") or {}
+    pf = _dget(c, "personal.parte_fuerza_institucional")
     mini = _chart_mini_donut(pf)
     _reemplazar(slides[0], ["object 35"], mini,
                 rect=(Inches(2.31), Inches(1.86), Inches(0.97), Inches(0.97)))
@@ -1288,7 +1294,7 @@ def _graficos(prs, slides, c: dict) -> None:
     # --- PÁG. 2: barras de fuerza de catástrofe (gráfico que faltaba), bajo la banda 3 ---
     c_top = (banda3.top + banda3.height + Inches(0.12)) if banda3 else Inches(8.86)
     c_h = min(Inches(1.75), prs.slide_height - Inches(0.25) - c_top)
-    cata = _chart_catastrofe(_get(c, "personal.catastrofe") or {})
+    cata = _chart_catastrofe(_dget(c, "personal.catastrofe"))
     _reemplazar(slides[1], _CATA_NAMES, cata,
                 rect=(m_left, c_top, prs.slide_width - Inches(0.28) - m_left, c_h))
 
@@ -1308,7 +1314,7 @@ def _graficos(prs, slides, c: dict) -> None:
 
     # --- PÁG. 6: operacionalidad logística, bajo la fila de cabeceras de la tabla ---
     oper = _chart_operacionalidad(_get(c, "logistica.operacionalidad") or [],
-                                  _get(c, "logistica.resumen") or {})
+                                  _dget(c, "logistica.resumen"))
     if oper:
         nm = _by_name(slides[5])
         grupo = nm.get("object 10")
