@@ -38,3 +38,6 @@ robot-qa/src/robot_qa.egg-info/
 # OS
 .DS_Store
 Thumbs.db
+
+# Archivos de bloqueo temporales de Word/PowerPoint al abrir un .docx/.pptx
+~$*

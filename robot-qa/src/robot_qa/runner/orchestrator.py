@@ -7,8 +7,8 @@ agregacion en CaseResult. El CampaignResult completo se pasa a
 from __future__ import annotations
 
 import json
-import statistics
 import subprocess
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -120,13 +120,18 @@ def run_campaign(
     }
 
     case_results: list[CaseResult] = []
-    for case in cases:
+    for i, case in enumerate(cases, start=1):
         reps = max(1, case.repetitions or default_repetitions)
+        action = case.input.get("action", "?")
+        print(f"[{i}/{len(cases)}] {case.case_id} ({case.category}, accion={action}, "
+              f"{reps} rep.) ejecutando...", end="", flush=True)
+        t_case = time.perf_counter()
         observations: list[Observation] = []
         for r in range(reps):
             obs = adapter.invoke(case, repetition=r, run_id=run_id)
             observations.append(obs)
             save_observation(evidence_dir, obs)
+            print(".", end="", flush=True)
 
         scores: list[Score] = []
         for obs in observations:
@@ -155,6 +160,7 @@ def run_campaign(
             verdict=verdict, consistency=consistency,
         ))
         save_case(evidence_dir, case, observations, scores)
+        print(f" {verdict.value} ({time.perf_counter() - t_case:.1f}s)", flush=True)
 
     manifest["finished_at"] = _now_iso()
     save_manifest(evidence_dir, manifest)

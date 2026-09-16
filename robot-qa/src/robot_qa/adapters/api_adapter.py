@@ -196,6 +196,7 @@ class ApiAdapter:
                     contenido = data["contenido"]
                     version = data.get("version")
                     break
+            print(":", end="", flush=True)  # generando/esperando al LLM -- evita que parezca colgado
             time.sleep(2)
 
         out = {
