@@ -6,6 +6,15 @@ nombradas (`case.input["action"]`) para que un mismo adaptador cubra las
 familias funcional, RAG, seguridad, robustez y rendimiento sin que cada
 evaluador conozca detalles de transporte HTTP.
 
+Sesion deslizante (RNF-001, backend/app/main.py `sesion_sliding`): cada
+request autenticado valido devuelve un token renovado en la cabecera
+`X-Session-Token`; si el adaptador no lo recoge, el token original expira a
+los `SESSION_TIMEOUT_MIN` (15 min) de SU PROPIA emision sin importar cuanta
+actividad haya habido -- letal para una campana larga (52 casos, export con
+LibreOffice, reintentos del LLM). Por eso toda llamada autenticada pasa por
+`_get`/`_post`, que capturan `X-Session-Token` y reintentan una vez con
+relogin si el servidor devuelve 401 (token realmente muerto).
+
 Limitacion documentada (Guia S10, "todo resultado debe poder reconstruirse"):
 la API de MVP-Ciitec no expone tokens/costo del LLM en sus respuestas, asi que
 `Observation.tokens_in/out/cost_usd` quedan en None salvo que el llamador los
@@ -70,13 +79,15 @@ class ApiAdapter:
         return self.users[username]
 
     def _login(self, username: str, password: str | None = None) -> tuple[str, dict]:
-        """Devuelve (token, usuario) usando cache de sesion por usuario."""
+        """Autentica y cachea el token. `password` explicito (p.ej. incorrecto a
+        proposito) NUNCA se cachea, para no envenenar la sesion real del usuario."""
         pwd = password if password is not None else self._password_for(username)
         r = self._client.post("/auth/login", json={"username": username, "password": pwd})
         if r.status_code != 200:
             raise LoginError(r.status_code, f"login fallo para {username}: {r.status_code} {r.text[:300]}")
         body = r.json()
-        self._tokens[username] = body["token"]
+        if password is None:
+            self._tokens[username] = body["token"]
         return body["token"], body.get("usuario", {})
 
     def _headers(self, username: str) -> dict:
@@ -84,6 +95,30 @@ class ApiAdapter:
         if token is None:
             token, _ = self._login(username)
         return {"Authorization": f"Bearer {token}"}
+
+    def _capture_session_token(self, username: str, response: httpx.Response) -> None:
+        """Sesion deslizante: recoge el token renovado que el middleware del SUT
+        emite en cada request valido (backend/app/main.py, X-Session-Token)."""
+        nuevo = response.headers.get("X-Session-Token")
+        if nuevo:
+            self._tokens[username] = nuevo
+
+    def _get(self, username: str, path: str, **kwargs) -> httpx.Response:
+        r = self._client.get(path, headers=self._headers(username), **kwargs)
+        if r.status_code == 401:
+            # token realmente expirado (no solo por renovar): relogin y un reintento.
+            self._tokens.pop(username, None)
+            r = self._client.get(path, headers=self._headers(username), **kwargs)
+        self._capture_session_token(username, r)
+        return r
+
+    def _post(self, username: str, path: str, **kwargs) -> httpx.Response:
+        r = self._client.post(path, headers=self._headers(username), **kwargs)
+        if r.status_code == 401:
+            self._tokens.pop(username, None)
+            r = self._client.post(path, headers=self._headers(username), **kwargs)
+        self._capture_session_token(username, r)
+        return r
 
     def _resolve_documents(self, case: TestCase) -> list[dict]:
         """Documentos inline (`setup.documents`, versionados en el YAML del caso)
@@ -107,10 +142,8 @@ class ApiAdapter:
             docs += [{"name": f.name, "path": str(f)} for f in files]
         return docs
 
-    def _upload_documents(self, username: str, documents: list[dict], nivel: str) -> list[dict]:
-        """Sube documentos via multipart: cada uno inline ({name, content}) o
-        real en disco ({name, path}, para PDF/Word/Excel del corpus sintetico)."""
-        headers = self._headers(username)
+    @staticmethod
+    def _build_multipart(documents: list[dict]) -> list[tuple]:
         files = []
         for doc in documents:
             name = doc["name"]
@@ -121,9 +154,26 @@ class ApiAdapter:
                 data = doc.get("content", "").encode("utf-8")
                 ctype = doc.get("content_type", "text/plain")
             files.append(("files", (name, io.BytesIO(data), ctype)))
+        return files
+
+    def _upload_documents(self, username: str, documents: list[dict], nivel: str) -> list[dict]:
+        """Sube documentos via multipart: cada uno inline ({name, content}) o
+        real en disco ({name, path}, para PDF/Word/Excel del corpus sintetico).
+
+        No usa `_post` directo: un `io.BytesIO` se consume al enviarse, asi que
+        un reintento tras 401 necesita reconstruir los ficheros desde cero, no
+        reenviar los mismos objetos ya leidos.
+        """
+        data = {"nivel_clasificacion": nivel}
         r = self._client.post(
-            "/fuentes", data={"nivel_clasificacion": nivel}, files=files, headers=headers
+            "/fuentes", data=data, files=self._build_multipart(documents), headers=self._headers(username)
         )
+        if r.status_code == 401:
+            self._tokens.pop(username, None)
+            r = self._client.post(
+                "/fuentes", data=data, files=self._build_multipart(documents), headers=self._headers(username)
+            )
+        self._capture_session_token(username, r)
         if r.status_code != 200:
             raise RuntimeError(f"subida de fuentes fallo: {r.status_code} {r.text[:300]}")
         return r.json()["fuentes"]
@@ -172,14 +222,13 @@ class ApiAdapter:
         poll_timeout = case.input.get("poll_timeout", self.default_poll_timeout)
         fetch = case.input.get("fetch", ["trazabilidad", "inconsistencias"])
 
-        headers = self._headers(username)
         fuentes = self._upload_documents(username, documents, nivel) if documents else []
         fuente_ids = case.input.get("fuente_ids") or [f["id"] for f in fuentes] or None
 
         body = {"titulo": titulo, "nivel_clasificacion": nivel}
         if fuente_ids:
             body["fuente_ids"] = fuente_ids
-        r = self._client.post("/briefings", json=body, headers=headers)
+        r = self._post(username, "/briefings", json=body)
         if r.status_code != 200:
             return {"fuentes": fuentes, "error_creacion": r.text[:500]}, r.status_code, {}
         creacion = r.json()
@@ -189,7 +238,7 @@ class ApiAdapter:
         contenido = None
         version = None
         while time.time() - t0 < poll_timeout:
-            det = self._client.get(f"/briefings/{briefing_id}", headers=headers)
+            det = self._get(username, f"/briefings/{briefing_id}")
             if det.status_code == 200:
                 data = det.json()
                 if data.get("contenido"):
@@ -206,12 +255,12 @@ class ApiAdapter:
         }
         sources_used = []
         if "trazabilidad" in fetch:
-            tr = self._client.get(f"/briefings/{briefing_id}/trazabilidad", headers=headers)
+            tr = self._get(username, f"/briefings/{briefing_id}/trazabilidad")
             if tr.status_code == 200:
                 out["trazabilidad"] = tr.json()
                 sources_used = [t.get("hecho_id") for t in out["trazabilidad"].get("trazas", [])]
         if "inconsistencias" in fetch:
-            inc = self._client.get(f"/briefings/{briefing_id}/inconsistencias", headers=headers)
+            inc = self._get(username, f"/briefings/{briefing_id}/inconsistencias")
             if inc.status_code == 200:
                 out["inconsistencias"] = inc.json()
         return out, 200, {"sources_used": sources_used}
@@ -221,18 +270,16 @@ class ApiAdapter:
         nunca sobreescribir la existente, y el diff entre ambas debe reflejar el cambio."""
         out, status_code, extra = self._action_flujo_briefing(case)
         if status_code != 200 or not out.get("contenido"):
-            return out, status_code, extra
+            return out, (status_code if status_code != 200 else 502), extra
         username = case.input.get("username", "operaciones")
-        headers = self._headers(username)
         editado = dict(out["contenido"])
         bullets = list(editado.get("resumen_ejecutivo") or [""])
         bullets[0] = f"[EDITADO-QA] {bullets[0]}"
         editado["resumen_ejecutivo"] = bullets
 
-        r = self._client.post(
-            f"/briefings/{out['briefing_id']}/versiones",
+        r = self._post(
+            username, f"/briefings/{out['briefing_id']}/versiones",
             json={"contenido": editado, "base_version": out["version"], "comentario": "robot-qa edit_version_check"},
-            headers=headers,
         )
         out["edit_status"] = r.status_code
         if r.status_code != 200:
@@ -240,9 +287,7 @@ class ApiAdapter:
         nueva_version = r.json().get("version") or r.json().get("numero_version")
         out["new_version"] = nueva_version
 
-        diff = self._client.get(
-            f"/briefings/{out['briefing_id']}/diff/{out['version']}/{nueva_version}", headers=headers
-        )
+        diff = self._get(username, f"/briefings/{out['briefing_id']}/diff/{out['version']}/{nueva_version}")
         out["diff_status"] = diff.status_code
         out["diff"] = diff.json() if diff.status_code == 200 else diff.text[:300]
         return out, r.status_code, extra
@@ -254,12 +299,12 @@ class ApiAdapter:
         t_before = datetime.now(timezone.utc).isoformat()
         out, status_code, extra = self._action_flujo_briefing(case)
         if status_code != 200 or not out.get("contenido"):
-            return out, status_code, extra
+            return out, (status_code if status_code != 200 else 502), extra
         t_after = datetime.now(timezone.utc).isoformat()
-        headers = self._headers(case.input.get("username", "operaciones"))
+        username = case.input.get("username", "operaciones")
 
-        antes = self._client.get(f"/briefings/{out['briefing_id']}/versiones", params={"at": t_before}, headers=headers)
-        despues = self._client.get(f"/briefings/{out['briefing_id']}/versiones", params={"at": t_after}, headers=headers)
+        antes = self._get(username, f"/briefings/{out['briefing_id']}/versiones", params={"at": t_before})
+        despues = self._get(username, f"/briefings/{out['briefing_id']}/versiones", params={"at": t_after})
         out["status_antes"] = antes.status_code
         out["status_despues"] = despues.status_code
         ok = antes.status_code == 404 and despues.status_code == 200
@@ -272,16 +317,14 @@ class ApiAdapter:
         documents = case.setup.get("documents") or [
             {"name": "doc_rbac.txt", "content": "Documento de prueba RBAC para robot-qa."}
         ]
-        owner_headers = self._headers(owner)
         fuentes = self._upload_documents(owner, documents, nivel)
         fuente_id = fuentes[0]["id"]
 
         target = case.input.get("target", "fuente")  # "fuente" | "briefing"
         if target == "briefing":
-            r = self._client.post(
-                "/briefings",
+            r = self._post(
+                owner, "/briefings",
                 json={"titulo": case.case_id, "fuente_ids": [fuente_id], "nivel_clasificacion": nivel},
-                headers=owner_headers,
             )
             resource_id = r.json()["briefing_id"]
             path = f"/briefings/{resource_id}"
@@ -289,8 +332,7 @@ class ApiAdapter:
             resource_id = fuente_id
             path = f"/fuentes/{resource_id}"
 
-        prober_headers = self._headers(prober)
-        probe = self._client.get(path, headers=prober_headers)
+        probe = self._get(prober, path)
         return (
             {"target": target, "resource_id": resource_id, "probed_status": probe.status_code,
              "probed_body": probe.text[:300]},
@@ -300,8 +342,7 @@ class ApiAdapter:
 
     def _action_audit_check(self, case: TestCase):
         username = case.input.get("username", "auditor")
-        headers = self._headers(username)
-        r = self._client.get("/audit/verificar", headers=headers)
+        r = self._get(username, "/audit/verificar")
         body = r.json() if r.status_code == 200 else {"error": r.text[:300]}
         return body, r.status_code, {}
 
@@ -311,10 +352,7 @@ class ApiAdapter:
             return out, status_code, extra
         username = case.input.get("username", "operaciones")
         formato = case.input.get("formato", "PDF")
-        headers = self._headers(username)
-        r = self._client.post(
-            f"/briefings/{out['briefing_id']}/exportar", json={"formato": formato}, headers=headers
-        )
+        r = self._post(username, f"/briefings/{out['briefing_id']}/exportar", json={"formato": formato})
         out["export_status"] = r.status_code
         out["export_content_type"] = r.headers.get("content-type", "")
         out["export_bytes"] = len(r.content)
@@ -324,16 +362,15 @@ class ApiAdapter:
         out, status_code, extra = self._action_flujo_briefing(case)
         if status_code != 200 or not out.get("briefing_id"):
             return out, status_code, extra
-        versiones_headers = self._headers(case.input.get("username", "operaciones"))
-        vs = self._client.get(f"/briefings/{out['briefing_id']}/versiones", headers=versiones_headers)
+        username = case.input.get("username", "operaciones")
+        vs = self._get(username, f"/briefings/{out['briefing_id']}/versiones")
         vlist = vs.json().get("versiones", [])
         if not vlist:
             out["approve_status"] = 404
             return out, 404, extra
         version_id = vlist[-1]["id"]
         approver = case.input.get("approver_username", "comandante")
-        approver_headers = self._headers(approver)
-        r = self._client.post(f"/briefings/versiones/{version_id}/aprobar", headers=approver_headers)
+        r = self._post(approver, f"/briefings/versiones/{version_id}/aprobar")
         out["approve_status"] = r.status_code
         out["approve_body"] = r.text[:300]
         return out, r.status_code, extra
