@@ -10,17 +10,29 @@ Salida: ./corpus/  (50 documentos + 5 "curados" más ricos).
 
 Dependencias: python-docx, openpyxl y (opcional) fpdf2 para PDF.
     pip install python-docx openpyxl fpdf2
+
+Flag --ground-truth (robot-qa, Guia ROBOT_QA S7 nivel 2 "comparación con
+referencia"): como random.seed(42) fija la secuencia, los hechos inyectados en
+cada documento son reproducibles. Con este flag, ADEMÁS de escribir el
+corpus, se vuelca a robot-qa/datasets/references/ground_truth.json qué hechos
+(unidad, lugar, tipo, fecha, estado, fuerza) quedaron en cada archivo — el
+evaluador `required_fact` del robot lo usa como referencia sin necesitar
+etiquetado humano.
 """
 from __future__ import annotations
 
+import json
 import os
 import random
+import sys
 from datetime import datetime, timedelta
 
 random.seed(42)
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "corpus")
 os.makedirs(OUT, exist_ok=True)
+
+GROUND_TRUTH: dict[str, dict] = {}  # nombre_archivo -> {"hechos": [...], "required_facts": [...]}
 
 UNIDADES = ["I División de Ejército", "JAF Arica y Parinacota", "JAF Tarapacá", "JAF Antofagasta",
             "JDN Biobío", "JDN Araucanía", "Fuerza de Tarea Andes", "BAE O'Higgins"]
@@ -44,49 +56,67 @@ def _fecha() -> datetime:
     return datetime(2026, 5, 1) + timedelta(days=random.randint(0, 20), hours=random.randint(0, 23))
 
 
-def _parrafo_hecho() -> str:
+def _parrafo_hecho() -> tuple[str, dict]:
     u = random.choice(UNIDADES)
     l = random.choice(LUGARES)
     tipo, desc = random.choice(INCIDENTES)
     f = _fecha()
     est = random.choice(ESTADOS)
     fuerza = random.randint(20, 180)
-    return (f"El {f.strftime('%d-%m-%Y')} la unidad {u} ejecutó en {l} la siguiente actividad: "
-            f"{desc} ({tipo}). Estado: {est}. Fuerza empeñada: {fuerza} efectivos. "
-            f"Responsable: Comandante de {u}.")
+    texto = (f"El {f.strftime('%d-%m-%Y')} la unidad {u} ejecutó en {l} la siguiente actividad: "
+             f"{desc} ({tipo}). Estado: {est}. Fuerza empeñada: {fuerza} efectivos. "
+             f"Responsable: Comandante de {u}.")
+    hecho = {
+        "unidad": u, "lugar": l, "tipo": tipo, "fecha": f.strftime("%d-%m-%Y"),
+        "estado": est, "fuerza": fuerza,
+    }
+    return texto, hecho
 
 
-def _texto_doc(n_hechos: int) -> str:
+def _texto_doc(n_hechos: int) -> tuple[str, list[dict]]:
     L = ["PARTE OPERACIONAL DIARIO — USO RESERVADO", ""]
+    hechos = []
     for _ in range(n_hechos):
-        L.append("- " + _parrafo_hecho())
+        texto, hecho = _parrafo_hecho()
+        L.append("- " + texto)
+        hechos.append(hecho)
     L += ["", "SITUACIÓN METEOROLÓGICA:", random.choice(METEO),
           "", f"PERSONAL: OF {random.randint(40,80)}, SOF {random.randint(100,200)}, "
           f"ECP {random.randint(200,400)}, TOTAL {random.randint(400,800)}."]
-    return "\n".join(L)
+    return "\n".join(L), hechos
+
+
+def _registrar_ground_truth(nombre_archivo: str, hechos: list[dict]) -> None:
+    required_facts = [h["unidad"] for h in hechos] + [h["lugar"] for h in hechos] + [h["tipo"] for h in hechos]
+    GROUND_TRUTH[nombre_archivo] = {"hechos": hechos, "required_facts": sorted(set(required_facts))}
 
 
 def gen_txt(path: str, n: int):
+    texto, hechos = _texto_doc(n)
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write(_texto_doc(n))
+        fh.write(texto)
+    _registrar_ground_truth(os.path.basename(path), hechos)
 
 
 def gen_eml(path: str, n: int):
     f = _fecha()
-    cuerpo = _texto_doc(n)
+    cuerpo, hechos = _texto_doc(n)
     eml = (f"From: operaciones@ejercito.cl\nTo: comando@ejercito.cl\n"
            f"Subject: Parte operacional {f.strftime('%d%b%Y')}\nDate: {f.strftime('%a, %d %b %Y %H:%M:%S -0400')}\n\n{cuerpo}")
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(eml)
+    _registrar_ground_truth(os.path.basename(path), hechos)
 
 
 def gen_docx(path: str, n: int):
     import docx
+    texto, hechos = _texto_doc(n)
     doc = docx.Document()
     doc.add_heading("Parte Operacional — Reservado", level=1)
-    for linea in _texto_doc(n).splitlines():
+    for linea in texto.splitlines():
         doc.add_paragraph(linea)
     doc.save(path)
+    _registrar_ground_truth(os.path.basename(path), hechos)
 
 
 def gen_xlsx(path: str, n: int):
@@ -106,12 +136,18 @@ def gen_pdf(path: str, n: int) -> bool:
         from fpdf import FPDF
     except ImportError:
         return False
+    texto, hechos = _texto_doc(n)
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Helvetica", size=11)
-    for linea in _texto_doc(n).splitlines():
+    for linea in texto.splitlines():
+        # fpdf2 2.8.x: tras una linea vacia con w=0 ("ancho hasta el margen"), el
+        # cursor X a veces no vuelve al margen izquierdo y la siguiente llamada
+        # revienta con "Not enough horizontal space". Se fuerza el reset.
+        pdf.set_x(pdf.l_margin)
         pdf.multi_cell(0, 6, linea.encode("latin-1", "replace").decode("latin-1"))
     pdf.output(path)
+    _registrar_ground_truth(os.path.basename(path), hechos)
     return True
 
 
@@ -139,6 +175,13 @@ def main():
     for j in range(1, 6):
         gen_docx(os.path.join(OUT, f"curado_{j}.docx"), random.randint(10, 14))
         creados += 1
+
+    if "--ground-truth" in sys.argv:
+        gt_path = os.path.join(os.path.dirname(__file__), "..", "robot-qa", "datasets", "references", "ground_truth.json")
+        os.makedirs(os.path.dirname(gt_path), exist_ok=True)
+        with open(gt_path, "w", encoding="utf-8") as fh:
+            json.dump(GROUND_TRUTH, fh, ensure_ascii=False, indent=2)
+        print(f"Ground truth ({len(GROUND_TRUTH)} archivos) volcado en {os.path.abspath(gt_path)}")
 
     print(f"Corpus generado en {os.path.abspath(OUT)}: {creados} documentos.")
     if sin_pdf:

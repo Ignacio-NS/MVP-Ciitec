@@ -1,0 +1,247 @@
+# Generado por robot-qa/scripts/generate_testcases.py -- NO editar a mano
+# sin volver a correr el generador (o los cambios se pierden en la proxima corrida).
+# Formato de caso: Guia ROBOT_QA S6.
+cases:
+- case_id: FUNC-001
+  requirement_id: RNF-001
+  category: funcional
+  title: Login valido
+  input:
+    action: login
+    username: operaciones
+  setup: {}
+  expected:
+    expect_status: 200
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-002
+  requirement_id: RNF-001
+  category: funcional
+  title: Login invalido es rechazado
+  input:
+    action: login
+    username: operaciones
+    password: clave-incorrecta-qa
+  setup: {}
+  expected:
+    expect_status: 401
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: high
+  tags: []
+- case_id: FUNC-003
+  requirement_id: RF-004
+  category: funcional
+  title: Carga y generacion basica (1 documento)
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: FUNC-003
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+  expected:
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - budget
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-004
+  requirement_id: RF-001
+  category: funcional
+  title: Ingesta cubre PDF, Word y Excel reales
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: FUNC-004
+  setup:
+    corpus_glob: doc_0[123].*
+    corpus_limit: 3
+  expected: {}
+  evaluators:
+  - schema
+  - budget
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags:
+  - requiere_corpus
+- case_id: FUNC-005
+  requirement_id: RF-007
+  category: funcional
+  title: Editar version crea una version nueva (append-only)
+  input:
+    action: edit_version_check
+    username: operaciones
+    titulo: FUNC-005
+  setup:
+    documents:
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+  expected:
+    expect_status: 200
+    contains:
+    - '[EDITADO-QA]'
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-006
+  requirement_id: RF-009
+  category: funcional
+  title: Reconstruccion point-in-time
+  input:
+    action: point_in_time_check
+    username: operaciones
+    titulo: FUNC-006
+  setup:
+    documents:
+    - name: putre.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 10-05-2026 la unidad Fuerza de Tarea Andes ejecuto en Putre la siguiente actividad: evaluacion
+        de danos y apoyo a la poblacion tras sismo (Sismo). Estado: ABIERTO. Fuerza empenada: 120 efectivos.
+        Responsable: Comandante de Fuerza de Tarea Andes.'
+  expected:
+    expect_status: 200
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-007
+  requirement_id: RF-008
+  category: funcional
+  title: Exportacion a PDF
+  input:
+    action: export_check
+    username: operaciones
+    titulo: FUNC-007
+    formato: PDF
+  setup:
+    documents:
+    - name: concepcion.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 12-05-2026 la unidad BAE O''Higgins ejecuto en Concepcion la siguiente actividad: evacuacion
+        preventiva y rescate por aluvion en quebrada (Aluvion). Estado: EN_CURSO. Fuerza empenada: 60
+        efectivos. Responsable: Comandante de BAE O''Higgins.'
+  expected:
+    expect_status: 200
+    contains:
+    - application/pdf
+  evaluators:
+  - http_contract
+  thresholds:
+    latency_s: 240
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-008
+  requirement_id: RF-008
+  category: funcional
+  title: Exportacion a Word
+  input:
+    action: export_check
+    username: operaciones
+    titulo: FUNC-008
+    formato: WORD
+  setup:
+    documents:
+    - name: punta_arenas.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 15-05-2026 la unidad JDN Biobio ejecuto en Punta Arenas la siguiente actividad: refuerzo de
+        borde costero ante marejadas anormales (Marejadas). Estado: CERRADO. Fuerza empenada: 30 efectivos.
+        Responsable: Comandante de JDN Biobio.'
+  expected:
+    expect_status: 200
+    contains:
+    - wordprocessingml
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-009
+  requirement_id: RF-008
+  category: funcional
+  title: Exportacion a texto plano
+  input:
+    action: export_check
+    username: operaciones
+    titulo: FUNC-009
+    formato: TEXTO
+  setup:
+    documents:
+    - name: calama.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 18-05-2026 la unidad JAF Antofagasta ejecuto en Calama la siguiente actividad: apoyo con brigada
+        de combate de incendios forestales (Incendio forestal). Estado: EN_CURSO. Fuerza empenada: 55
+        efectivos. Responsable: Comandante de JAF Antofagasta.'
+  expected:
+    expect_status: 200
+    contains:
+    - text/plain
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: FUNC-010
+  requirement_id: RF-007
+  category: funcional
+  title: Aprobacion de version por rol habilitado
+  input:
+    action: approve_check
+    username: operaciones
+    titulo: FUNC-010
+    approver_username: comandante
+  setup:
+    documents:
+    - name: iquique.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 20-05-2026 la unidad JAF Tarapaca ejecuto en Iquique la siguiente actividad: reconocimiento
+        de ruta tras deslizamiento menor (Deslizamiento). Estado: ABIERTO. Fuerza empenada: 25 efectivos.
+        Responsable: Comandante de JAF Tarapaca.'
+  expected:
+    expect_status: 200
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []

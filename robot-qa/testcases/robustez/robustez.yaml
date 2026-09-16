@@ -1,0 +1,333 @@
+# Generado por robot-qa/scripts/generate_testcases.py -- NO editar a mano
+# sin volver a correr el generador (o los cambios se pierden en la proxima corrida).
+# Formato de caso: Guia ROBOT_QA S6.
+cases:
+- case_id: ROB-001
+  requirement_id: RF-005
+  category: robustez
+  title: Parafraseo no cambia el hecho extraido
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-001
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+    metamorphic:
+      relation: MR-01
+      transform: paraphrase
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: ROB-002
+  requirement_id: RF-005
+  category: robustez
+  title: Parafraseo (aluvion) no cambia el hecho
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-002
+  setup:
+    documents:
+    - name: concepcion.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 12-05-2026 la unidad BAE O''Higgins ejecuto en Concepcion la siguiente actividad: evacuacion
+        preventiva y rescate por aluvion en quebrada (Aluvion). Estado: EN_CURSO. Fuerza empenada: 60
+        efectivos. Responsable: Comandante de BAE O''Higgins.'
+    metamorphic:
+      relation: MR-01
+      transform: paraphrase
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: ROB-003
+  requirement_id: RF-005
+  category: robustez
+  title: Reordenar documentos no cambia el resultado
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-003
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+    metamorphic:
+      relation: MR-02
+      transform: reorder
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: ROB-004
+  requirement_id: RF-005
+  category: robustez
+  title: Reordenar 3 documentos no cambia el conjunto de hechos
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-004
+  setup:
+    documents:
+    - name: putre.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 10-05-2026 la unidad Fuerza de Tarea Andes ejecuto en Putre la siguiente actividad: evaluacion
+        de danos y apoyo a la poblacion tras sismo (Sismo). Estado: ABIERTO. Fuerza empenada: 120 efectivos.
+        Responsable: Comandante de Fuerza de Tarea Andes.'
+    - name: calama.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 18-05-2026 la unidad JAF Antofagasta ejecuto en Calama la siguiente actividad: apoyo con brigada
+        de combate de incendios forestales (Incendio forestal). Estado: EN_CURSO. Fuerza empenada: 55
+        efectivos. Responsable: Comandante de JAF Antofagasta.'
+    - name: iquique.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 20-05-2026 la unidad JAF Tarapaca ejecuto en Iquique la siguiente actividad: reconocimiento
+        de ruta tras deslizamiento menor (Deslizamiento). Estado: ABIERTO. Fuerza empenada: 25 efectivos.
+        Responsable: Comandante de JAF Tarapaca.'
+    metamorphic:
+      relation: MR-02
+      transform: reorder
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: ROB-005
+  requirement_id: RF-005
+  category: robustez
+  title: Quitar un documento no aumenta los hechos extraidos
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-005
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+    metamorphic:
+      relation: MR-03
+      transform: remove_doc
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: high
+  tags: []
+- case_id: ROB-006
+  requirement_id: RF-005
+  category: robustez
+  title: Quitar un documento (de 3) no aumenta los hechos
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-006
+  setup:
+    documents:
+    - name: putre.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 10-05-2026 la unidad Fuerza de Tarea Andes ejecuto en Putre la siguiente actividad: evaluacion
+        de danos y apoyo a la poblacion tras sismo (Sismo). Estado: ABIERTO. Fuerza empenada: 120 efectivos.
+        Responsable: Comandante de Fuerza de Tarea Andes.'
+    - name: concepcion.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 12-05-2026 la unidad BAE O''Higgins ejecuto en Concepcion la siguiente actividad: evacuacion
+        preventiva y rescate por aluvion en quebrada (Aluvion). Estado: EN_CURSO. Fuerza empenada: 60
+        efectivos. Responsable: Comandante de BAE O''Higgins.'
+    - name: calama.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 18-05-2026 la unidad JAF Antofagasta ejecuto en Calama la siguiente actividad: apoyo con brigada
+        de combate de incendios forestales (Incendio forestal). Estado: EN_CURSO. Fuerza empenada: 55
+        efectivos. Responsable: Comandante de JAF Antofagasta.'
+    metamorphic:
+      relation: MR-03
+      transform: remove_doc
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: high
+  tags: []
+- case_id: ROB-007
+  requirement_id: RF-005
+  category: robustez
+  title: Documento irrelevante no genera asuntos criticos nuevos
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-007
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+    metamorphic:
+      relation: MR-04
+      transform: add_irrelevant
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: ROB-008
+  requirement_id: RF-005
+  category: robustez
+  title: Documento irrelevante (con 2 docs base) no genera asuntos criticos nuevos
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-008
+  setup:
+    documents:
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+    - name: punta_arenas.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 15-05-2026 la unidad JDN Biobio ejecuto en Punta Arenas la siguiente actividad: refuerzo de
+        borde costero ante marejadas anormales (Marejadas). Estado: CERRADO. Fuerza empenada: 30 efectivos.
+        Responsable: Comandante de JDN Biobio.'
+    metamorphic:
+      relation: MR-04
+      transform: add_irrelevant
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: ROB-009
+  requirement_id: RF-005
+  category: robustez
+  title: Duplicar un documento no duplica los hechos (dedup por hash)
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-009
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+    metamorphic:
+      relation: MR-05
+      transform: duplicate_doc
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: high
+  tags: []
+- case_id: ROB-010
+  requirement_id: RF-002
+  category: robustez
+  title: Reformatear la fecha no cambia el hecho extraido
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: ROB-010
+  setup:
+    documents:
+    - name: iquique.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 20-05-2026 la unidad JAF Tarapaca ejecuto en Iquique la siguiente actividad: reconocimiento
+        de ruta tras deslizamiento menor (Deslizamiento). Estado: ABIERTO. Fuerza empenada: 25 efectivos.
+        Responsable: Comandante de JAF Tarapaca.'
+    metamorphic:
+      relation: MR-06
+      transform: date_format
+  expected: {}
+  evaluators:
+  - schema
+  - metamorphic
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []

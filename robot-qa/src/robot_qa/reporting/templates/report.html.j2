@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Robot QA — {{ result.campaign }} — {{ result.run_id }}</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a2e; background: #fafafa; }
+  h1 { margin-bottom: 0.2rem; }
+  .sub { color: #555; margin-top: 0; }
+  .gate { display: inline-block; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 700; color: #fff; }
+  .gate-PASS { background: #1a7f37; }
+  .gate-HUMAN_REVIEW { background: #b08800; }
+  .gate-REJECT { background: #cf222e; }
+  .metrics { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1.2rem 0; }
+  .metric { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 0.6rem 1rem; min-width: 150px; }
+  .metric b { display: block; font-size: 1.3rem; }
+  table { border-collapse: collapse; width: 100%; margin-top: 1rem; background: #fff; }
+  th, td { border: 1px solid #ddd; padding: 0.45rem 0.6rem; font-size: 0.88rem; text-align: left; vertical-align: top; }
+  th { background: #f0f0f5; }
+  .v-PASS { color: #1a7f37; font-weight: 700; }
+  .v-FAIL { color: #cf222e; font-weight: 700; }
+  .v-HUMAN_REVIEW { color: #b08800; font-weight: 700; }
+  .v-ERROR { color: #888; font-weight: 700; }
+  .score-fail { color: #cf222e; }
+  .score-crit { background: #ffebe9; }
+  details summary { cursor: pointer; }
+  code { font-size: 0.85em; }
+</style>
+</head>
+<body>
+  <h1>Robot QA — {{ result.campaign }}</h1>
+  <p class="sub">run_id: <code>{{ result.run_id }}</code> · inicio: {{ result.started_at }} · fin: {{ result.finished_at }}</p>
+  <p><span class="gate gate-{{ result.gate.value }}">GATE: {{ result.gate.value }}</span> — {{ result.gate_reason }}</p>
+
+  <div class="metrics">
+    {% for k, v in metrics_display.items() %}
+    <div class="metric"><b>{{ v }}</b>{{ k }}</div>
+    {% endfor %}
+  </div>
+
+  <h2>Manifiesto de reproducibilidad</h2>
+  <table>
+    {% for k, v in result.manifest.items() %}
+    <tr><th>{{ k }}</th><td>{{ v }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Casos ({{ result.cases|length }})</h2>
+  <table>
+    <tr>
+      <th>case_id</th><th>requirement_id</th><th>categoria</th><th>severidad</th>
+      <th>veredicto</th><th>consistencia</th><th>evaluadores</th>
+    </tr>
+    {% for cr in result.cases %}
+    <tr>
+      <td>{{ cr.case.case_id }}</td>
+      <td>{{ cr.case.requirement_id }}</td>
+      <td>{{ cr.case.category }}</td>
+      <td>{{ cr.case.severity }}</td>
+      <td class="v-{{ cr.verdict.value }}">{{ cr.verdict.value }}</td>
+      <td>{{ "%.2f"|format(cr.consistency) if cr.consistency is not none else "—" }}</td>
+      <td>
+        <details>
+          <summary>{{ cr.scores|length }} score(s)</summary>
+          <table>
+            <tr><th>evaluador</th><th>rep</th><th>valor</th><th>ok</th><th>detalle</th></tr>
+            {% for s in cr.scores %}
+            <tr class="{{ 'score-crit' if s.critical and not s.passed else '' }}">
+              <td>{{ s.evaluator_id }}</td>
+              <td>{{ s.repetition }}</td>
+              <td>{{ "%.2f"|format(s.value) }}</td>
+              <td class="{{ '' if s.passed else 'score-fail' }}">{{ "si" if s.passed else "NO" }}</td>
+              <td>{{ s.detail }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>

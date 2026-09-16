@@ -21,6 +21,17 @@ node_modules/
 dist/
 dev-dist/
 
+# Robot QA: evidencia y reportes de cada corrida (voluminosos, se regeneran
+# con `python -m robot_qa run`). La linea base SI se versiona (regresiones).
+robot-qa/evidence/
+robot-qa/reports/*.html
+robot-qa/reports/*.json
+robot-qa/reports/*.junit.xml
+robot-qa/reports/*.diff.json
+!robot-qa/reports/baseline.json
+robot-qa/datasets/references/ground_truth.json
+robot-qa/src/robot_qa.egg-info/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,0 +1,95 @@
+name: Robot QA
+
+# CI Connector (Guia ROBOT_QA S4/S5): levanta el stack completo de MVP-Ciitec,
+# corre la campana `smoke` del robot y publica el reporte + exit code segun
+# el gate de liberacion (Guia S11).
+#
+# GEMINI_API_KEY: la mayoria de los casos de smoke invocan al LLM real (igual
+# que el SUT en produccion). Si el secret `GEMINI_API_KEY` no esta configurado
+# en el repositorio, el job corre solo el subconjunto de casos que NO
+# necesitan LLM (login, auditoria) para que CI siga siendo verde sin
+# credenciales; la campana completa (`full`) queda para correrse localmente
+# o manualmente con el secret configurado.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      campaign:
+        description: "Campana a ejecutar"
+        type: choice
+        default: smoke
+        options: [smoke, full, security]
+
+jobs:
+  robot-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar .env
+        run: |
+          cp .env.example .env
+          if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
+            sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|" .env
+          fi
+
+      - name: Generar certificados TLS self-signed
+        run: bash scripts/gen_certs.sh
+
+      - name: Levantar el stack (docker compose)
+        run: docker compose up -d --build
+
+      - name: Esperar a que la API responda
+        run: |
+          for i in $(seq 1 60); do
+            code=$(curl -sk -o /dev/null -w "%{http_code}" https://localhost/api/health || true)
+            [ "$code" = "200" ] && echo "API lista" && exit 0
+            sleep 5
+          done
+          echo "La API no respondio a tiempo"; docker compose logs --tail=200; exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar robot-qa
+        run: python -m pip install -e ./robot-qa
+
+      - name: Generar corpus sintetico (RAG/rendimiento reales)
+        run: |
+          python -m pip install python-docx openpyxl fpdf2
+          python scripts/gen_corpus.py --ground-truth
+
+      - name: Ejecutar campana
+        env:
+          GEMINI_SET: ${{ secrets.GEMINI_API_KEY != '' }}
+        run: |
+          CAMPAIGN="${{ github.event.inputs.campaign || 'smoke' }}"
+          if [ "$GEMINI_SET" = "true" ]; then
+            python -m robot_qa run --campaign "$CAMPAIGN"
+          else
+            echo "GEMINI_API_KEY no configurado: corriendo solo casos sin LLM."
+            python -m robot_qa run --campaign "$CAMPAIGN" --no-judge \
+              --cases FUNC-001,FUNC-002,SEC-008,SEC-009,REL-004,REL-005
+          fi
+
+      - name: Publicar reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-qa-report
+          path: |
+            robot-qa/reports/
+            robot-qa/evidence/*/human_review_queue.jsonl
+
+      - name: Logs del stack (si algo fallo)
+        if: failure()
+        run: docker compose logs --tail=300
+
+      - name: Apagar el stack
+        if: always()
+        run: docker compose down -v
