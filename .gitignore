@@ -6,6 +6,9 @@ infra/nginx/certs/
 corpus/
 *.pdf
 *.docx
+# Entregables del Robot QA SI se versionan (son el trabajo entregado, no datos generados).
+!ROBOT_QA/entregables/*.docx
+!ROBOT_QA/entregables/*.pdf
 
 # Fonts propietarias (Calibri/Times/Trebuchet) - no distribuibles en repo público
 backend/app/templates/fonts/
