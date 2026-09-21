@@ -179,6 +179,9 @@ class _OpenAICompatProvider(LLMProvider):
     model: str
     max_retries: int
     max_output_tokens: int = settings.llm_max_output_tokens
+    # Parámetros extra por proveedor (p.ej. Gemini necesita reasoning_effort="none"
+    # para no gastar tiempo/tokens en "thinking" interno antes del JSON final).
+    extra_create_kwargs: dict[str, Any] = {}
 
     def _chat_json(self, system: str, user: str) -> dict[str, Any]:
         """Pide JSON al modelo; repara JSON truncado y reintenta con backoff."""
@@ -194,6 +197,7 @@ class _OpenAICompatProvider(LLMProvider):
                     response_format={"type": "json_object"},
                     temperature=0.1,
                     max_tokens=self.max_output_tokens,
+                    **self.extra_create_kwargs,
                 )
                 choice = resp.choices[0]
                 raw = _strip_fences(choice.message.content or "")
@@ -278,6 +282,13 @@ class GroqProvider(_OpenAICompatProvider):
 
 class GeminiProvider(_OpenAICompatProvider):
     """Gemini (Google) vía su endpoint OpenAI-compatible."""
+
+    # gemini-2.5-flash/flash-lite "piensan" por defecto (tokens de razonamiento
+    # internos antes del JSON final), lo que suma latencia real al presupuesto
+    # de generación sin aportar al resultado (no citamos el thinking). "none"
+    # lo desactiva para estos modelos (no aplica a 2.5 Pro / 3, que no permiten
+    # apagarlo). Ver: https://ai.google.dev/gemini-api/docs/openai
+    extra_create_kwargs: dict[str, Any] = {"reasoning_effort": "none"}
 
     def __init__(self) -> None:
         from openai import OpenAI  # import perezoso
