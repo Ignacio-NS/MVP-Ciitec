@@ -1,0 +1,126 @@
+# Generado por robot-qa/scripts/generate_testcases.py -- NO editar a mano
+# sin volver a correr el generador (o los cambios se pierden en la proxima corrida).
+# Formato de caso: Guia ROBOT_QA S6.
+cases:
+- case_id: REL-001
+  requirement_id: RF-004
+  category: confiabilidad
+  title: Consistencia de la generacion basica entre repeticiones
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: REL-001
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+  expected: {}
+  evaluators:
+  - schema
+  thresholds: {}
+  repetitions: 5
+  severity: medium
+  tags: []
+- case_id: REL-002
+  requirement_id: RF-003
+  category: confiabilidad
+  title: Consistencia de recall de hechos entre repeticiones
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: REL-002
+  setup:
+    documents:
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+    - name: calama.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 18-05-2026 la unidad JAF Antofagasta ejecuto en Calama la siguiente actividad: apoyo con brigada
+        de combate de incendios forestales (Incendio forestal). Estado: EN_CURSO. Fuerza empenada: 55
+        efectivos. Responsable: Comandante de JAF Antofagasta.'
+  expected:
+    required_facts:
+    - Calama
+    - Deslizamiento
+    - Incendio forestal
+    - JAF Antofagasta
+    - JDN Araucania
+    - Temuco
+  evaluators:
+  - schema
+  - required_fact
+  thresholds:
+    required_fact: 0.8
+  repetitions: 5
+  severity: medium
+  tags: []
+- case_id: REL-003
+  requirement_id: RF-006
+  category: confiabilidad
+  title: Consistencia de citas entre repeticiones
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: REL-003
+  setup:
+    documents:
+    - name: putre.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 10-05-2026 la unidad Fuerza de Tarea Andes ejecuto en Putre la siguiente actividad: evaluacion
+        de danos y apoyo a la poblacion tras sismo (Sismo). Estado: ABIERTO. Fuerza empenada: 120 efectivos.
+        Responsable: Comandante de Fuerza de Tarea Andes.'
+  expected:
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  thresholds: {}
+  repetitions: 5
+  severity: medium
+  tags: []
+- case_id: REL-004
+  requirement_id: RNF-001
+  category: confiabilidad
+  title: El login es perfectamente determinista
+  input:
+    action: login
+    username: operaciones
+  setup: {}
+  expected:
+    expect_status: 200
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 5
+  severity: medium
+  tags: []
+- case_id: REL-005
+  requirement_id: RNF-003
+  category: confiabilidad
+  title: La verificacion de auditoria es determinista
+  input:
+    action: audit_check
+    username: auditor
+  setup: {}
+  expected:
+    expect_status: 200
+  evaluators:
+  - http_contract
+  thresholds: {}
+  repetitions: 3
+  severity: medium
+  tags: []

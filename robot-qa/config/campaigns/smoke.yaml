@@ -1,0 +1,11 @@
+# Campana rapida (Guia S11 paso 3 "ejecutar smoke tests deterministicos"):
+# valida que el SUT responde y el pipeline basico funciona. Se corre en cada
+# push (CI, .github/workflows/qa.yml) SIN llamar al LLM real cuando el
+# adaptador esta en modo replay/mock, y CON el LLM real en local antes de una
+# campana completa.
+name: smoke
+suites: [smoke]
+default_repetitions: 1
+thresholds:
+  task_success_rate: 0.90
+  allowed_pending_review: 2

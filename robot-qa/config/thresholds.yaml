@@ -1,0 +1,37 @@
+# Umbrales por defecto del robot QA (Guia S7: "los umbrales son ejemplos
+# docentes; cada equipo debe justificar los suyos a partir del contexto y la
+# severidad, no presentarlos como valores universales").
+#
+# Cada caso puede sobreescribir cualquiera de estos umbrales en su propio
+# `thresholds:` (ver testcases/*/*.yaml). Los de aqui son el default cuando
+# el caso no declara uno propio.
+
+# Nivel 1 - citas (citation_support): fraccion minima de bullets con hecho_id
+# resuelto. 0.90 porque una cita rota es grave (Guia S8: "el problema del
+# oraculo"), pero se deja un 10% de margen a fallos transitorios de red.
+citation_support: 0.90
+
+# Nivel 2 - hechos requeridos (required_fact): se exige el 100% porque el
+# ground truth es sintetico y exacto (scripts/gen_corpus.py --ground-truth);
+# no hay ambiguedad legitima que justifique tolerancia.
+required_fact: 1.0
+
+# Rendimiento: 180s viene directo de RNF-004 del README (50 documentos < 3
+# minutos). Para campanas con menos documentos se usa el mismo techo: es un
+# techo de latencia de UNA generacion, no un promedio por documento.
+default_latency_s: 180.0
+
+# Relaciones metamorficas (Guia S8): similitud minima esperada del conjunto de
+# hechos extraidos frente a una variante que NO deberia cambiar el contenido.
+# 0.5 es deliberadamente permisivo (jaccard de palabras es una heuristica
+# ruidosa ante parafraseo real de un LLM); se documenta como limite docente.
+metamorphic_MR-01: 0.5   # paraphrase
+metamorphic_MR-02: 0.6   # reorder
+metamorphic_MR-06: 0.5   # date_format
+
+# Juez LLM (rubric_llm): 0.6 = 3/5 en la escala anclada de rubrics/calidad_semantica.md.
+rubric_llm: 0.6
+
+# Gate de liberacion (Guia S11).
+task_success_rate: 0.90
+allowed_pending_review: 5

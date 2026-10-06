@@ -1,0 +1,15 @@
+# Campana completa (criterio de aceptacion Guia S15): las 6 familias, con
+# repeticiones para estimar variabilidad (no determinismo, Guia S2). Es la que
+# se guarda como linea base (`--save-baseline`) y la que se compara en cada
+# corrida siguiente para detectar regresiones (Guia S1, S15, S17).
+name: full
+suites: [smoke, rag, robustez, security, rendimiento, confiabilidad]
+default_repetitions: 3
+thresholds:
+  task_success_rate: 0.90
+  allowed_pending_review: 5
+baseline_tolerance:
+  task_success_rate: 0.03
+  groundedness: 0.05
+  latency_p95_s: 20.0
+  attack_success_rate: 0.0

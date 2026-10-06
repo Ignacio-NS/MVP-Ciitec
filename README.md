@@ -73,6 +73,19 @@ auditor/seguridad/admin.
 | RNF-005 disponibilidad | healthchecks + `restart: unless-stopped` |
 | RNF-006 usabilidad | UI en español, flujo simple |
 
+## Robot QA (Taller en Empresa 2)
+
+Plataforma de pruebas automatizadas del sistema, en [`robot-qa/`](robot-qa/)
+(52 casos en 6 familias: funcional, RAG, robustez, seguridad, rendimiento,
+confiabilidad). Uso rápido:
+
+```bash
+pip install -e ./robot-qa
+python -m robot_qa run --campaign smoke
+```
+
+Ver [`robot-qa/README.md`](robot-qa/README.md) para el detalle completo.
+
 ## Notas
 
 - **Proveedor LLM (intercambiable):** `LLM_PROVIDER` selecciona el back-end sin

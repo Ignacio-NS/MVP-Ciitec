@@ -1,0 +1,124 @@
+# Generado por robot-qa/scripts/generate_testcases.py -- NO editar a mano
+# sin volver a correr el generador (o los cambios se pierden en la proxima corrida).
+# Formato de caso: Guia ROBOT_QA S6.
+cases:
+- case_id: PERF-001
+  requirement_id: RNF-004
+  category: rendimiento
+  title: Latencia con 1 documento (linea base)
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: PERF-001
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+  expected: {}
+  evaluators:
+  - schema
+  - budget
+  thresholds:
+    latency_s: 60
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: PERF-002
+  requirement_id: RNF-004
+  category: rendimiento
+  title: Latencia con 5 documentos reales
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: PERF-002
+    poll_timeout: 120
+  setup:
+    corpus_glob: doc_*.*
+    corpus_limit: 5
+  expected: {}
+  evaluators:
+  - schema
+  - budget
+  thresholds:
+    latency_s: 90
+  repetitions: 1
+  severity: medium
+  tags:
+  - requiere_corpus
+- case_id: PERF-003
+  requirement_id: RNF-004
+  category: rendimiento
+  title: Latencia con 15 documentos reales
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: PERF-003
+    poll_timeout: 150
+  setup:
+    corpus_glob: doc_*.*
+    corpus_limit: 15
+  expected: {}
+  evaluators:
+  - schema
+  - budget
+  thresholds:
+    latency_s: 150
+  repetitions: 1
+  severity: medium
+  tags:
+  - requiere_corpus
+- case_id: PERF-004
+  requirement_id: RNF-004
+  category: rendimiento
+  title: 'RNF-004: 50 documentos en menos de 3 minutos'
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: PERF-004
+    poll_timeout: 240
+  setup:
+    corpus_glob: doc_*.*
+    corpus_limit: 50
+  expected: {}
+  evaluators:
+  - schema
+  - budget
+  thresholds:
+    latency_s: 180
+  repetitions: 1
+  severity: critical
+  tags:
+  - requiere_corpus
+  - rnf-004
+- case_id: PERF-005
+  requirement_id: RF-008
+  category: rendimiento
+  title: Latencia de exportacion a PDF (conversion LibreOffice)
+  input:
+    action: export_check
+    username: operaciones
+    titulo: PERF-005
+    formato: PDF
+  setup:
+    documents:
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+  expected: {}
+  evaluators:
+  - schema
+  - budget
+  thresholds:
+    latency_s: 240
+  repetitions: 1
+  severity: medium
+  tags: []

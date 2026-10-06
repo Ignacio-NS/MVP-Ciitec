@@ -1,0 +1,414 @@
+# Generado por robot-qa/scripts/generate_testcases.py -- NO editar a mano
+# sin volver a correr el generador (o los cambios se pierden en la proxima corrida).
+# Formato de caso: Guia ROBOT_QA S6.
+cases:
+- case_id: RAG-001
+  requirement_id: RF-003
+  category: rag
+  title: Hecho unico se recupera y se cita
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-001
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+  expected:
+    required_facts:
+    - Arica
+    - Incendio forestal
+    - JAF Arica y Parinacota
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-002
+  requirement_id: RF-003
+  category: rag
+  title: Hecho unico (deslizamiento) se recupera
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-002
+  setup:
+    documents:
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+  expected:
+    required_facts:
+    - Deslizamiento
+    - JDN Araucania
+    - Temuco
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-003
+  requirement_id: RF-003
+  category: rag
+  title: Hecho unico (sismo) se recupera
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-003
+  setup:
+    documents:
+    - name: putre.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 10-05-2026 la unidad Fuerza de Tarea Andes ejecuto en Putre la siguiente actividad: evaluacion
+        de danos y apoyo a la poblacion tras sismo (Sismo). Estado: ABIERTO. Fuerza empenada: 120 efectivos.
+        Responsable: Comandante de Fuerza de Tarea Andes.'
+  expected:
+    required_facts:
+    - Fuerza de Tarea Andes
+    - Putre
+    - Sismo
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-004
+  requirement_id: RF-003
+  category: rag
+  title: Hecho unico (aluvion) se recupera
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-004
+  setup:
+    documents:
+    - name: concepcion.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 12-05-2026 la unidad BAE O''Higgins ejecuto en Concepcion la siguiente actividad: evacuacion
+        preventiva y rescate por aluvion en quebrada (Aluvion). Estado: EN_CURSO. Fuerza empenada: 60
+        efectivos. Responsable: Comandante de BAE O''Higgins.'
+  expected:
+    required_facts:
+    - Aluvion
+    - BAE O'Higgins
+    - Concepcion
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-005
+  requirement_id: RF-003
+  category: rag
+  title: Hecho unico (marejadas) se recupera
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-005
+  setup:
+    documents:
+    - name: punta_arenas.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 15-05-2026 la unidad JDN Biobio ejecuto en Punta Arenas la siguiente actividad: refuerzo de
+        borde costero ante marejadas anormales (Marejadas). Estado: CERRADO. Fuerza empenada: 30 efectivos.
+        Responsable: Comandante de JDN Biobio.'
+  expected:
+    required_facts:
+    - JDN Biobio
+    - Marejadas
+    - Punta Arenas
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-006
+  requirement_id: RF-004
+  category: rag
+  title: Sintesis multi-documento cubre TODOS los incidentes
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-006
+  setup:
+    documents:
+    - name: arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+    - name: temuco.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 07-05-2026 la unidad JDN Araucania ejecuto en Temuco la siguiente actividad: despeje de ruta
+        tras deslizamiento de tierra por lluvias (Deslizamiento). Estado: CERRADO. Fuerza empenada: 40
+        efectivos. Responsable: Comandante de JDN Araucania.'
+    - name: calama.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 18-05-2026 la unidad JAF Antofagasta ejecuto en Calama la siguiente actividad: apoyo con brigada
+        de combate de incendios forestales (Incendio forestal). Estado: EN_CURSO. Fuerza empenada: 55
+        efectivos. Responsable: Comandante de JAF Antofagasta.'
+  expected:
+    required_facts:
+    - Arica
+    - Calama
+    - Deslizamiento
+    - Incendio forestal
+    - JAF Antofagasta
+    - JAF Arica y Parinacota
+    - JDN Araucania
+    - Temuco
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds:
+    required_fact: 0.8
+  repetitions: 1
+  severity: high
+  tags: []
+- case_id: RAG-007
+  requirement_id: RF-002
+  category: rag
+  title: La fecha del hecho se preserva en la sintesis
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-007
+  setup:
+    documents:
+    - name: iquique.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 20-05-2026 la unidad JAF Tarapaca ejecuto en Iquique la siguiente actividad: reconocimiento
+        de ruta tras deslizamiento menor (Deslizamiento). Estado: ABIERTO. Fuerza empenada: 25 efectivos.
+        Responsable: Comandante de JAF Tarapaca.'
+  expected:
+    required_facts:
+    - JAF Tarapaca
+    - Iquique
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-008
+  requirement_id: RF-003
+  category: rag
+  title: El responsable citado en el documento se conserva
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-008
+  setup:
+    documents:
+    - name: responsable_arica.txt
+      content: 'PARTE OPERACIONAL DIARIO - USO RESERVADO
+
+
+        El 03-05-2026 la unidad JAF Arica y Parinacota ejecuto en Arica la siguiente actividad: apoyo
+        a combate de incendio forestal con medios de ingenieros (Incendio forestal). Estado: EN_CURSO.
+        Fuerza empenada: 85 efectivos. Responsable: Comandante de JAF Arica y Parinacota.'
+  expected:
+    required_facts:
+    - Comandante de JAF Arica y Parinacota
+  evaluators:
+  - schema
+  - required_fact
+  thresholds:
+    required_fact: 0.0
+  repetitions: 1
+  severity: medium
+  tags:
+  - diagnostico
+- case_id: RAG-009
+  requirement_id: RF-006
+  category: rag
+  title: 'Documento corto: cada bullet debe seguir citado'
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-009
+  setup:
+    documents:
+    - name: nota_breve.txt
+      content: 'PARTE BREVE: sin novedades relevantes que reportar en el periodo.'
+  expected: {}
+  evaluators:
+  - schema
+  - citation_support
+  thresholds: {}
+  repetitions: 1
+  severity: medium
+  tags: []
+- case_id: RAG-010
+  requirement_id: RF-003
+  category: rag
+  title: Groundedness sobre documento real rico (curado_1.docx)
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-010
+  setup:
+    corpus_glob: curado_1.docx
+  expected:
+    required_facts:
+    - Aluvión
+    - Antofagasta
+    - Arica
+    - Calama
+    - Concepción
+    - Deslizamiento
+    - Fuerza de Tarea Andes
+    - Incendio forestal
+    - JAF Antofagasta
+    - JAF Tarapacá
+    - JDN Araucanía
+    - JDN Biobío
+    - Marejadas
+    - Punta Arenas
+    - Putre
+    - Temuco
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  - budget
+  thresholds:
+    required_fact: 0.7
+  repetitions: 1
+  severity: medium
+  tags:
+  - requiere_corpus
+  - requiere_ground_truth
+- case_id: RAG-011
+  requirement_id: RF-003
+  category: rag
+  title: Groundedness sobre documento real rico (curado_2.docx)
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-011
+  setup:
+    corpus_glob: curado_2.docx
+  expected:
+    required_facts:
+    - Aluvión
+    - Antofagasta
+    - BAE O'Higgins
+    - Calama
+    - Concepción
+    - I División de Ejército
+    - Incendio forestal
+    - Iquique
+    - JAF Antofagasta
+    - JAF Arica y Parinacota
+    - JAF Tarapacá
+    - JDN Araucanía
+    - JDN Biobío
+    - Marejadas
+    - Punta Arenas
+    - Putre
+    - Sismo
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  - budget
+  thresholds:
+    required_fact: 0.7
+  repetitions: 1
+  severity: medium
+  tags:
+  - requiere_corpus
+  - requiere_ground_truth
+- case_id: RAG-012
+  requirement_id: RF-003
+  category: rag
+  title: Groundedness sobre documento real rico (curado_3.docx)
+  input:
+    action: flujo_briefing
+    username: operaciones
+    titulo: RAG-012
+  setup:
+    corpus_glob: curado_3.docx
+  expected:
+    required_facts:
+    - Aluvión
+    - Antofagasta
+    - BAE O'Higgins
+    - Calama
+    - Concepción
+    - Deslizamiento
+    - I División de Ejército
+    - Incendio forestal
+    - Iquique
+    - JAF Arica y Parinacota
+    - JAF Tarapacá
+    - JDN Araucanía
+    - JDN Biobío
+    - Marejadas
+    - Punta Arenas
+    - Putre
+    - Sismo
+    citation_required: true
+  evaluators:
+  - schema
+  - citation_support
+  - required_fact
+  - budget
+  thresholds:
+    required_fact: 0.7
+  repetitions: 1
+  severity: medium
+  tags:
+  - requiere_corpus
+  - requiere_ground_truth
