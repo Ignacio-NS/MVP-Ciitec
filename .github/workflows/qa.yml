@@ -40,6 +40,12 @@ jobs:
       - name: Generar certificados TLS self-signed
         run: bash scripts/gen_certs.sh
 
+      # Las fuentes institucionales (Calibri, Trebuchet...) son propietarias y estan en
+      # .gitignore; el Dockerfile del backend hace COPY de esa carpeta y falla en un clon
+      # limpio. En CI basta una carpeta vacia: LibreOffice usa fuentes de reemplazo.
+      - name: Crear carpeta de fuentes vacia (no se versionan)
+        run: mkdir -p backend/app/templates/fonts && touch backend/app/templates/fonts/.keep
+
       - name: Levantar el stack (docker compose)
         run: docker compose up -d --build
 
