@@ -1,0 +1,18 @@
+# Override SOLO para CI (GitHub Actions): `minio/minio` ya no se puede bajar de forma
+# anonima desde Docker Hub (pull access denied), asi que el runner, que parte sin cache,
+# no puede levantar el stack. Se usa una imagen equivalente que si es publica.
+# El desarrollo local sigue con docker-compose.yml sin cambios.
+#
+# Uso:  COMPOSE_FILE=docker-compose.yml:docker-compose.ci.yml docker compose up -d --build
+services:
+  minio:
+    image: bitnamilegacy/minio:latest
+    command: !reset null
+    ports: !reset []
+    volumes: !override
+      - minio_data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
