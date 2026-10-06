@@ -49,6 +49,21 @@ def _hechos_payload(hechos: list[Hecho]) -> list[dict[str, Any]]:
     ]
 
 
+def contexto_fuentes(db: Session, fuente_ids: list[str]) -> str:
+    """Texto acotado de las fuentes, con presupuesto POR archivo (para que TODAS aporten
+    cifras) y el nombre del archivo antepuesto para poder atribuir cada dato (RF-004)."""
+    filas = db.execute(
+        select(Fuente.nombre_archivo, Fuente.texto_extraido).where(Fuente.id.in_(fuente_ids))
+    ).all()
+    por_fuente = settings.synth_max_chars_por_fuente
+    bloques = [
+        f"[{nombre}]\n{(texto or '')[:por_fuente]}"
+        for nombre, texto in filas
+        if texto
+    ]
+    return "\n---\n".join(bloques)[: settings.synth_max_contexto_chars]
+
+
 def sintetizar(
     db: Session,
     *,
@@ -64,20 +79,7 @@ def sintetizar(
     # las casillas numéricas institucionales que no son "hechos" (RF-004).
     params = dict(parametros or {})
     if fuente_ids:
-        # Presupuesto POR archivo (no solo los primeros chars del primer archivo) para que
-        # TODAS las fuentes aporten cifras (personal, logística, meteo). Se antepone el
-        # nombre del archivo para que la síntesis pueda atribuir cada dato (RF-004).
-        filas = db.execute(
-            select(Fuente.nombre_archivo, Fuente.texto_extraido).where(Fuente.id.in_(fuente_ids))
-        ).all()
-        por_fuente = settings.synth_max_chars_por_fuente
-        bloques = [
-            f"[{nombre}]\n{(texto or '')[:por_fuente]}"
-            for nombre, texto in filas
-            if texto
-        ]
-        contexto = "\n---\n".join(bloques)
-        params["contexto_fuentes"] = contexto[: settings.synth_max_contexto_chars]
+        params["contexto_fuentes"] = contexto_fuentes(db, fuente_ids)
 
     hechos_sel = _select_hechos(hechos, settings.synth_max_hechos)
     contenido = provider.sintetizar_briefing(_hechos_payload(hechos_sel), params)
@@ -88,6 +90,21 @@ def sintetizar(
             BriefingVersion.briefing_id == briefing_id
         )
     ).scalar_one()
+
+    # Las hojas adicionales las agrega el usuario (no las genera la síntesis): al regenerar el
+    # briefing se arrastran desde la última versión para no perderlas.
+    previa = (
+        db.execute(
+            select(BriefingVersion)
+            .where(BriefingVersion.briefing_id == briefing_id, BriefingVersion.numero_version == actual)
+        ).scalar_one_or_none()
+        if actual
+        else None
+    )
+    hojas_previas = (previa.contenido or {}).get("hojas_adicionales") if previa else None
+    if hojas_previas:
+        contenido["hojas_adicionales"] = hojas_previas
+
     version = BriefingVersion(
         briefing_id=briefing_id,
         numero_version=actual + 1,
@@ -115,4 +132,15 @@ def sintetizar(
                         hecho_id=hid,
                     )
                 )
+
+    # Trazabilidad de las hojas arrastradas (claves 'hoja:<id>:b<n>', RF-006).
+    if hojas_previas:
+        trazas_hoja = db.execute(
+            select(VersionBulletHecho).where(
+                VersionBulletHecho.version_id == previa.id,
+                VersionBulletHecho.bullet_key.like("hoja:%"),
+            )
+        ).scalars().all()
+        for t in trazas_hoja:
+            db.add(VersionBulletHecho(version_id=version.id, bullet_key=t.bullet_key, hecho_id=t.hecho_id))
     return version

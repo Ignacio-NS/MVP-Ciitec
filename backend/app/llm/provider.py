@@ -14,6 +14,7 @@ El LLM no garantiza JSON-schema estricto, así que cada método:
 from __future__ import annotations
 
 import json
+import logging
 import time
 from abc import ABC, abstractmethod
 from typing import Any
@@ -25,7 +26,10 @@ from ..schemas.llm import (
     BriefingOut,
     ContradiccionesResponse,
     HechosResponse,
+    HojaCompletada,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LLMError(RuntimeError):
@@ -123,6 +127,29 @@ Responde SOLO con JSON válido:
 {"contradicciones":[{"descripcion":"...","hechos_involucrados":["id1","id2"],"severidad":1}]}
 severidad: 1 baja, 2 media, 3 alta. Si no hay contradicciones reales, devuelve {"contradicciones": []}."""
 
+_HOJA_SYS = """Eres un asesor de operaciones del Ejército de Chile. El mando pidió una HOJA ADICIONAL
+para el reporte institucional. Recibes: la hoja ("titulo", "seccion", "instrucciones" del mando y
+"bloques" con el formato que eligió el usuario), los HECHOS extraídos (cada uno con su id) y el
+"contexto_fuentes" (texto de los documentos). Completa la hoja SOLO con datos presentes en los
+hechos/contexto. Si "documentos_adjuntos" no está vacío, el "contexto_fuentes" contiene el texto de esos
+documentos (cada uno encabezado por [nombre]) y son la fuente PRINCIPAL: extrae de ellos toda la
+información relevante (cifras, tablas, listados, fechas, unidades) y vuélcala en los bloques; una tabla
+del documento debe quedar como bloque "tabla" con sus mismas columnas y filas. Responde SOLO con JSON válido (sin preámbulo ni markdown):
+{"titulo": "...", "bloques": [ ... ], "trazabilidad": {"b0": ["id-de-hecho"]}}
+"titulo": solo si la hoja NO traía título (propón uno breve, en mayúsculas); si ya traía, devuélvelo vacío.
+Cada bloque tiene "tipo" y sus campos:
+- texto:   {"tipo":"texto","titulo":"...","texto":"..."}
+- vinetas: {"tipo":"vinetas","titulo":"...","items":["..."]}
+- tabla:   {"tipo":"tabla","titulo":"...","columnas":["..."],"filas":[["...","..."]]}
+- kpis:    {"tipo":"kpis","titulo":"...","items":[{"etiqueta":"...","valor":"..."}]}
+- grafico: {"tipo":"grafico","titulo":"...","estilo":"barras|barras_h|dona","categorias":["..."],"valores":[1,2]}
+- imagen:  NO la completes; devuélvela tal cual venía.
+Reglas: si "bloques" trae estructura, RESPÉTALA (mismos tipos, mismo orden, mismas columnas y títulos) y
+solo rellena el contenido; si viene vacío, propón el formato más adecuado a las instrucciones (máx. 4 bloques).
+NO inventes cifras ni datos: si no hay información, deja el campo vacío ("" o lista vacía). En "valores"
+usa números. En "trazabilidad" la clave es "b<índice del bloque>" y el valor los ids de los hechos que lo
+respaldan (solo ids que existan en los hechos entregados)."""
+
 
 class LLMProvider(ABC):
     """Contrato que cumple cualquier proveedor (Groq hoy, modelo local mañana)."""
@@ -135,6 +162,9 @@ class LLMProvider(ABC):
 
     @abstractmethod
     def detectar_contradicciones(self, hechos: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    def completar_hoja(self, hechos: list[dict[str, Any]], contexto: str, hoja: dict[str, Any]) -> dict[str, Any]: ...
 
 
 def _strip_fences(s: str) -> str:
@@ -179,13 +209,23 @@ class _OpenAICompatProvider(LLMProvider):
     model: str
     max_retries: int
     max_output_tokens: int = settings.llm_max_output_tokens
+    # Techo al que se puede escalar max_tokens si la salida se trunca (depende del modelo).
+    max_output_techo: int = settings.llm_max_output_tokens
     # Parámetros extra por proveedor (p.ej. Gemini necesita reasoning_effort="none"
     # para no gastar tiempo/tokens en "thinking" interno antes del JSON final).
     extra_create_kwargs: dict[str, Any] = {}
 
     def _chat_json(self, system: str, user: str) -> dict[str, Any]:
-        """Pide JSON al modelo; repara JSON truncado y reintenta con backoff."""
+        """Pide JSON al modelo y reintenta con backoff.
+
+        Una respuesta cortada por el tope de tokens (finish_reason="length") NUNCA se acepta
+        "reparada": json_repair cierra las llaves y Pydantic rellena con vacíos todo lo que
+        faltaba (secciones enteras sin datos, guardadas como un briefing válido). En ese caso
+        se reintenta con más tokens de salida y, si ya no se puede, se falla con LLMError.
+        json_repair solo se usa para JSON mal formado que NO se truncó.
+        """
         last_err: Exception | None = None
+        max_tokens = self.max_output_tokens
         for intento in range(self.max_retries):
             try:
                 resp = self.client.chat.completions.create(
@@ -196,27 +236,33 @@ class _OpenAICompatProvider(LLMProvider):
                     ],
                     response_format={"type": "json_object"},
                     temperature=0.1,
-                    max_tokens=self.max_output_tokens,
+                    max_tokens=max_tokens,
                     **self.extra_create_kwargs,
                 )
                 choice = resp.choices[0]
+                truncado = choice.finish_reason == "length"
                 raw = _strip_fences(choice.message.content or "")
                 try:
-                    return json.loads(raw)
+                    return json.loads(raw)  # JSON completo y válido (aunque roce el tope)
                 except json.JSONDecodeError as e:
-                    # JSON mal formado: intentar reparar (cierra strings/llaves).
+                    if truncado:
+                        logger.warning(
+                            "Salida LLM truncada (finish_reason=length, max_tokens=%s, usage=%s)",
+                            max_tokens, getattr(resp, "usage", None),
+                        )
+                        if max_tokens < self.max_output_techo:
+                            max_tokens = min(max_tokens * 2, self.max_output_techo)
+                            last_err = LLMError("salida truncada por el tope de tokens")
+                            continue  # reintenta de inmediato con más tokens de salida
+                        raise LLMError(
+                            "La respuesta del LLM superó el tope de tokens de salida "
+                            f"({max_tokens}) y quedó incompleta; no se acepta un resultado a medias. "
+                            "Sube LLM_MAX_OUTPUT_TOKENS o reduce el alcance (menos fuentes)."
+                        ) from e
+                    # JSON mal formado pero completo: intentar reparar (comas, comillas).
                     reparado = _try_repair_json(raw)
                     if reparado is not None:
                         return reparado
-                    # Si vino cortado por el tope de tokens, reintentar idéntico
-                    # vuelve a truncar igual: falla rápido con mensaje claro.
-                    if choice.finish_reason == "length":
-                        raise LLMError(
-                            "El briefing superó el tope de tokens de salida configurado "
-                            f"(llm_max_output_tokens={self.max_output_tokens}) y el JSON "
-                            "truncado no se pudo reparar. Sube llm_max_output_tokens "
-                            "(deepseek-chat admite mucho más) o reduce el alcance."
-                        ) from e
                     raise
             except LLMError:
                 raise  # error definitivo (truncación irreparable): no reintentar
@@ -252,6 +298,28 @@ class _OpenAICompatProvider(LLMProvider):
         except ValidationError:
             return []  # la detección de contradicciones es best-effort
 
+    def completar_hoja(self, hechos: list[dict[str, Any]], contexto: str, hoja: dict[str, Any]) -> dict[str, Any]:
+        payload = json.dumps(
+            {
+                "hoja": {
+                    "id": hoja.get("id", ""),
+                    "titulo": hoja.get("titulo", ""),
+                    "seccion": hoja.get("seccion", ""),
+                    "instrucciones": hoja.get("instrucciones_ia", ""),
+                    "documentos_adjuntos": [d.get("nombre", "") for d in hoja.get("documentos", [])],
+                    "bloques": hoja.get("bloques", []),
+                },
+                "hechos": hechos,
+                "contexto_fuentes": contexto,
+            },
+            ensure_ascii=False,
+        )
+        data = self._chat_json(_HOJA_SYS, payload)
+        try:
+            return HojaCompletada.model_validate(data).model_dump()
+        except ValidationError as e:
+            raise LLMError(f"Hoja con formato inválido: {e}")
+
 
 class DeepSeekProvider(_OpenAICompatProvider):
     """DeepSeek (endpoint OpenAI-compatible) — proveedor activo (pagado)."""
@@ -278,6 +346,7 @@ class GroqProvider(_OpenAICompatProvider):
         self.client = Groq(api_key=settings.groq_api_key)
         self.model = settings.groq_model
         self.max_retries = settings.groq_max_retries
+        self.max_output_techo = max(self.max_output_tokens, 32768)  # tope de Llama 3.3 70B en Groq
 
 
 class GeminiProvider(_OpenAICompatProvider):
@@ -301,6 +370,8 @@ class GeminiProvider(_OpenAICompatProvider):
         )
         self.model = settings.gemini_model
         self.max_retries = settings.llm_max_retries
+        # Si aun sin "thinking" la salida se trunca, se puede escalar hasta el techo del modelo.
+        self.max_output_techo = max(self.max_output_tokens, 65536)
 
 
 class GitHubProvider(_OpenAICompatProvider):
@@ -329,6 +400,9 @@ class LocalLLMProvider(LLMProvider):
         raise NotImplementedError("Implementar con el modelo local on-premise.")
 
     def detectar_contradicciones(self, hechos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        raise NotImplementedError("Implementar con el modelo local on-premise.")
+
+    def completar_hoja(self, hechos: list[dict[str, Any]], contexto: str, hoja: dict[str, Any]) -> dict[str, Any]:
         raise NotImplementedError("Implementar con el modelo local on-premise.")
 
 

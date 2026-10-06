@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { EdHojas, HojasLectura } from "../components/HojasAdicionales";
 import { Icon } from "../components/icons";
 import { Badge, Pill, Tag, fmtFecha } from "../components/ui";
 
@@ -323,6 +324,7 @@ function EdSeccion({
 function EditorReporte({
   draft,
   setDraft,
+  briefingId,
   proximaVersion,
   baseVersion,
   guardando,
@@ -331,6 +333,7 @@ function EditorReporte({
 }: {
   draft: any;
   setDraft: (d: any) => void;
+  briefingId: string;
   proximaVersion: number;
   baseVersion: number | null;
   guardando: boolean;
@@ -455,6 +458,23 @@ function EditorReporte({
             defaultOpen={i === 0}
           />
         ))}
+      </div>
+
+      <div className="card">
+        <div className="card__head">
+          <div className="card__title">
+            <Icon name="file" className="card__icon" />
+            Hojas adicionales
+          </div>
+        </div>
+        <div className="card__body">
+          <EdHojas
+            hojas={draft.hojas_adicionales || []}
+            briefingId={briefingId}
+            onChange={(nv) => setDraft({ ...draft, hojas_adicionales: nv })}
+            onTraza={(t) => setDraft((d: any) => ({ ...d, trazabilidad: { ...(d.trazabilidad || {}), ...t } }))}
+          />
+        </div>
       </div>
     </div>
   );
@@ -730,6 +750,7 @@ export default function Briefing() {
         <EditorReporte
           draft={draft}
           setDraft={setDraft}
+          briefingId={id}
           proximaVersion={proximaVersion}
           baseVersion={numeroMostrado ?? null}
           guardando={guardando}
@@ -887,6 +908,8 @@ export default function Briefing() {
                 />
               ))}
             </div>
+
+            <HojasLectura hojas={c.hojas_adicionales || []} briefingId={id} />
 
             <div className="card">
               <div className="card__head">

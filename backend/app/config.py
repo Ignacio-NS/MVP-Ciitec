@@ -49,8 +49,8 @@ class Settings(BaseSettings):
     # no-thinking) admite hasta ~64K+ de salida; el briefing institucional es JSON
     # grande y con 8000 se truncaba ("Unterminated string"). 16384 da holgura;
     # solo se factura lo realmente generado. Si aun así se corta, json_repair
-    # salvaguarda el JSON truncado (ver provider.py).
-    llm_max_output_tokens: int = 16384
+    # NO acepta JSON truncado (ver provider.py: reintenta con más tokens o falla).
+    llm_max_output_tokens: int = 32768
     # Topes de ENTRADA para la síntesis (evitan exceder el contexto del proveedor).
     synth_max_hechos: int = 150              # nº máx. de hechos enviados a síntesis
     synth_max_contexto_chars: int = 40000    # tope total del texto crudo (contexto_fuentes); DeepSeek 64k lo permite

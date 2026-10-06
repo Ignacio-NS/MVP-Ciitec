@@ -8,18 +8,22 @@ from __future__ import annotations
 import difflib
 import io
 import json
+import os
+import re
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from .. import audit, storage
 from ..auth import rbac
 from ..auth.deps import CurrentUser, get_current_user, require_roles
+from ..config import settings
 from ..db import get_db
+from ..llm.provider import LLMError, get_llm_provider
 from ..models import (
     Briefing,
     BriefingVersion,
@@ -29,9 +33,11 @@ from ..models import (
     Inconsistencia,
     VersionBulletHecho,
 )
-from ..pipeline import exportacion
+from ..pipeline import exportacion, ingesta, sintesis
 from ..schemas.api import CrearBriefingIn, EditarVersionIn, ExportarIn
+from ..schemas.llm import HojaAdicional
 from ..worker import lanzar_generacion
+from .fuentes import _EXT_TIPO, _tipo
 from .seguridad import exigir_nivel
 
 router = APIRouter(prefix="/briefings", tags=["briefings"])
@@ -274,8 +280,22 @@ def editar_version(
     db.flush()
     # La nueva versión conserva los vínculos bullet -> hecho de la versión base (RF-006).
     trazas = db.execute(select(VersionBulletHecho).where(VersionBulletHecho.version_id == base.id)).scalars().all()
+    vistos = {(t.bullet_key, str(t.hecho_id)) for t in trazas}
     for t in trazas:
         db.add(VersionBulletHecho(version_id=version.id, bullet_key=t.bullet_key, hecho_id=t.hecho_id))
+    # Trazabilidad de las hojas adicionales (claves 'hoja:<id>:b<n>'): solo hechos de las
+    # fuentes del briefing, para que nadie vincule hechos ajenos (RF-006, RNF-001).
+    traza_hojas = {k: v for k, v in (body.contenido.get("trazabilidad") or {}).items()
+                   if isinstance(k, str) and k.startswith("hoja:") and isinstance(v, list)}
+    if traza_hojas:
+        fuentes_ok = [str(f) for f in (base.fuentes_agregadas or [])]
+        ids_ok = {str(h) for h in db.execute(
+            select(Hecho.id).where(Hecho.fuente_id.in_(fuentes_ok))).scalars()} if fuentes_ok else set()
+        for key, hids in traza_hojas.items():
+            for hid in hids:
+                if str(hid) in ids_ok and (key[:300], str(hid)) not in vistos:
+                    vistos.add((key[:300], str(hid)))
+                    db.add(VersionBulletHecho(version_id=version.id, bullet_key=key[:300], hecho_id=hid))
     b.estado = "BORRADOR"  # una edición posterior a la aprobación requiere re-aprobar
     db.commit()
     audit.registrar(db, accion="EDICION", actor_id=user.id, entidad_tipo="version",
@@ -380,3 +400,170 @@ def exportar(
     nombre = f"{b.titulo.replace(' ', '_')}_v{v.numero_version}.{ext}"
     return StreamingResponse(io.BytesIO(data), media_type=content_type,
                              headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+# ---------------- Hojas adicionales ----------------
+_IMG_TIPOS = {"image/png": "png", "image/jpeg": "jpg"}
+_IMG_MAX = 5 * 1024 * 1024
+
+
+def _briefing_autorizado(db: Session, user: CurrentUser, briefing_id: str) -> Briefing:
+    b = db.get(Briefing, uuid.UUID(briefing_id))
+    if b is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Briefing no encontrado")
+    exigir_nivel(db, user, b.nivel_clasificacion, entidad_tipo="briefing", entidad_id=str(b.id), unidad_recurso=b.unidad)
+    return b
+
+
+@router.post("/{briefing_id}/hojas/imagen")
+async def subir_imagen_hoja(
+    briefing_id: str,
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sube una imagen (PNG/JPG, <= 5 MB) para un bloque 'imagen' de una hoja adicional."""
+    b = _briefing_autorizado(db, user, briefing_id)
+    ext = _IMG_TIPOS.get((file.content_type or "").lower())
+    if ext is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se aceptan imágenes PNG o JPG")
+    data = await file.read(_IMG_MAX + 1)
+    if len(data) > _IMG_MAX:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "La imagen supera los 5 MB")
+    firma_ok = data.startswith(b"\x89PNG") if ext == "png" else data.startswith(b"\xff\xd8")
+    if not firma_ok:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo no es una imagen válida")
+    key = f"hojas/{b.id}/{uuid.uuid4().hex}.{ext}"
+    storage.put_bytes(key, data, file.content_type)
+    audit.registrar(db, accion="INGESTA", actor_id=user.id, entidad_tipo="briefing",
+                    entidad_id=str(b.id), detalle={"tipo": "imagen_hoja", "objeto": key},
+                    nivel_afectado=b.nivel_clasificacion)
+    return {"objeto": key}
+
+
+_DOC_MAX = 20 * 1024 * 1024
+_DOC_MAX_POR_HOJA = 5
+
+
+@router.post("/{briefing_id}/hojas/documento")
+async def subir_documento_hoja(
+    briefing_id: str,
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Adjunta un documento (PDF, Word, Excel, correo, texto) a una hoja adicional.
+
+    NO entra al pool de fuentes del briefing: solo alimenta la hoja que lo adjuntó."""
+    b = _briefing_autorizado(db, user, briefing_id)
+    nombre = os.path.basename(file.filename or "documento")
+    ext = os.path.splitext(nombre)[1].lower()
+    if ext not in _EXT_TIPO:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "Formato no soportado. Usa PDF, Word, Excel, correo (.eml/.msg) o texto/CSV")
+    data = await file.read(_DOC_MAX + 1)
+    if len(data) > _DOC_MAX:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El documento supera los 20 MB")
+    tipo = _tipo(nombre)
+    try:
+        texto = ingesta.extraer_texto(data, tipo, nombre)
+    except Exception:
+        texto = ""
+    if not texto.strip():
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            "No se pudo extraer texto del documento (¿PDF escaneado o archivo dañado?)")
+    seguro = re.sub(r"[^A-Za-z0-9._-]", "_", nombre)[:120]
+    key = f"hojas/{b.id}/docs/{uuid.uuid4().hex}/{seguro}"
+    storage.ensure_bucket()
+    storage.put_bytes(key, data, file.content_type or "application/octet-stream")
+    audit.registrar(db, accion="INGESTA", actor_id=user.id, entidad_tipo="briefing",
+                    entidad_id=str(b.id), detalle={"tipo": "documento_hoja", "objeto": key, "nombre": nombre},
+                    nivel_afectado=b.nivel_clasificacion)
+    return {"nombre": nombre, "objeto": key, "tipo": tipo, "caracteres": len(texto)}
+
+
+@router.get("/{briefing_id}/hojas/imagen")
+def ver_imagen_hoja(
+    briefing_id: str,
+    objeto: str,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    b = _briefing_autorizado(db, user, briefing_id)
+    # Solo objetos del propio briefing (evita path traversal / lectura de otros objetos).
+    if not objeto.startswith(f"hojas/{b.id}/") or ".." in objeto:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Objeto fuera del briefing")
+    try:
+        data = storage.get_bytes(objeto)
+    except Exception:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Imagen no encontrada")
+    return Response(data, media_type="image/png" if objeto.endswith(".png") else "image/jpeg")
+
+
+@router.post("/{briefing_id}/hojas/completar")
+def completar_hoja(
+    briefing_id: str,
+    hoja: HojaAdicional,
+    user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """'Completar con IA': rellena los bloques de una hoja con los hechos/fuentes del briefing.
+
+    NO persiste: devuelve la hoja para que el usuario la revise y guarde (versión nueva)."""
+    b = _briefing_autorizado(db, user, briefing_id)
+    hechos: list = []
+    if hoja.documentos:
+        # Con documentos adjuntos, la hoja se completa SOLO con ellos (no con los hechos
+        # del briefing): es la información que el usuario quiere ver en esa hoja.
+        if len(hoja.documentos) > _DOC_MAX_POR_HOJA:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Máximo {_DOC_MAX_POR_HOJA} documentos por hoja")
+        por_doc = min(15000, settings.synth_max_contexto_chars // len(hoja.documentos))
+        bloques_ctx = []
+        for d in hoja.documentos:
+            # Solo objetos adjuntados a ESTE briefing (evita leer objetos ajenos).
+            if not d.objeto.startswith(f"hojas/{b.id}/docs/") or ".." in d.objeto:
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "Documento fuera del briefing")
+            try:
+                crudo = storage.get_bytes(d.objeto)
+                texto = ingesta.extraer_texto(crudo, _tipo(d.nombre), d.nombre)
+            except Exception:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, f"No se pudo leer el documento {d.nombre}")
+            bloques_ctx.append(f"[{d.nombre}]\n{texto[:por_doc]}")
+        ctx = "\n---\n".join(bloques_ctx)
+    else:
+        v = _version_activa(db, b.id)
+        if v is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "El briefing aún no tiene versión")
+        fuente_ids = [str(f) for f in (v.fuentes_agregadas or [])]
+        hechos = db.execute(select(Hecho).where(Hecho.fuente_id.in_(fuente_ids))).scalars().all() if fuente_ids else []
+        hechos = sintesis._select_hechos(list(hechos), settings.synth_max_hechos)
+        ctx = sintesis.contexto_fuentes(db, fuente_ids) if fuente_ids else ""
+
+    entrada = hoja.model_dump()
+    entrada["id"] = entrada["id"] or uuid.uuid4().hex[:8]
+    try:
+        r = get_llm_provider().completar_hoja(sintesis._hechos_payload(hechos), ctx, entrada)
+    except LLMError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+    except NotImplementedError as e:
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, str(e))
+
+    # Las imágenes las sube el usuario: se conservan tal cual venían, sin importar lo que devuelva el LLM.
+    orig = entrada["bloques"]
+    bloques = r["bloques"]
+    for i, ob in enumerate(orig):
+        if ob.get("tipo") == "imagen":
+            if i < len(bloques):
+                bloques[i] = ob
+            else:
+                bloques.append(ob)
+    ids_validos = {str(h.id) for h in hechos}
+    traza = {}
+    for k, hids in (r.get("trazabilidad") or {}).items():
+        validos = [str(h) for h in hids if str(h) in ids_validos]
+        if validos:
+            traza[f"hoja:{entrada['id']}:{k}"] = validos
+    audit.registrar(db, accion="GENERACION", actor_id=user.id, entidad_tipo="briefing",
+                    entidad_id=str(b.id), detalle={"tipo": "hoja_adicional", "hoja": entrada["id"]},
+                    nivel_afectado=b.nivel_clasificacion)
+    return {"id": entrada["id"], "titulo": r.get("titulo") or "", "bloques": bloques, "trazabilidad": traza}

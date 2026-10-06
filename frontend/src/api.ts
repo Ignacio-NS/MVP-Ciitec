@@ -80,6 +80,22 @@ export const api = {
       body: JSON.stringify({ formato, version_id }),
     }) as Promise<Blob>,
 
+  // Hojas adicionales del reporte
+  subirImagenHoja: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request(`/briefings/${id}/hojas/imagen`, { method: "POST", body: fd }, true);
+  },
+  subirDocumentoHoja: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request(`/briefings/${id}/hojas/documento`, { method: "POST", body: fd }, true);
+  },
+  imagenHoja: (id: string, objeto: string): Promise<Blob> =>
+    request(`/briefings/${id}/hojas/imagen?objeto=${encodeURIComponent(objeto)}`) as Promise<Blob>,
+  completarHoja: (id: string, hoja: any) =>
+    request(`/briefings/${id}/hojas/completar`, { method: "POST", body: JSON.stringify(hoja) }),
+
   getAudit: () => request("/audit"),
   verificarAudit: () => request("/audit/verificar"),
 };

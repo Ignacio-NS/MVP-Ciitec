@@ -501,6 +501,10 @@ textarea.input{height:auto;min-height:60px;padding:8px 12px;resize:vertical;line
 .ed-table td{padding:5px 6px}
 .ed-table .input{height:30px;font-size:var(--tx-sm);padding:0 8px;min-width:90px}
 .ed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sp-3)}
+/* hojas adicionales */
+.hoja-ed{border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:var(--sp-4);background:var(--surface-2)}
+.hoja-bloque{border:1px solid var(--border);border-radius:var(--r);padding:var(--sp-3);background:var(--surface)}
+.tag-tipo{font-size:var(--tx-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);background:var(--accent-weak);border-radius:var(--r-sm);padding:2px 8px}
 
 /* point-in-time result */
 .pit-result{margin-top:var(--sp-3);padding:var(--sp-4);border:1px solid var(--accent-border);background:var(--accent-weak);border-radius:var(--r);display:flex;align-items:center;gap:var(--sp-3)}

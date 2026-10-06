@@ -52,7 +52,7 @@ from PIL import Image as PILImage  # noqa: E402
 from PIL import ImageDraw, ImageFont  # noqa: E402
 from pptx import Presentation  # noqa: E402
 from pptx.dml.color import RGBColor  # noqa: E402
-from pptx.enum.shapes import MSO_SHAPE_TYPE  # noqa: E402
+from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE  # noqa: E402
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN  # noqa: E402
 from pptx.oxml import parse_xml  # noqa: E402
 from pptx.oxml.ns import nsdecls, qn  # noqa: E402
@@ -1327,6 +1327,481 @@ def _graficos(prs, slides, c: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+#  HOJAS ADICIONALES (las agrega el usuario desde el editor del reporte)
+#
+#  Cada hoja = encabezado institucional idéntico al de las demás páginas (clon del
+#  de INTELIGENCIA) + bloques apilados (texto, viñetas, tabla, KPIs, gráfico, imagen).
+#  Lo que no cabe en una página sigue en otra con el mismo encabezado ("(CONT.)").
+#  Bloque sin datos -> se omite (nunca se inventa). Se insertan tras la página pedida.
+# ---------------------------------------------------------------------------
+_HOJA_X = Inches(0.40)
+_HOJA_W = Inches(7.70)
+_HOJA_TOP = Inches(1.15)
+_HOJA_BOTTOM = Inches(10.50)
+_BANDA_H = Inches(0.42)
+_PALETA = [NAVY, AZUL, CELESTE, ROJO, "#7F7F7F", "#70AD47"]
+_HDR_NAMES = ["object 11", "object 15", "object 16", "object 17", "object 18"]
+_BANDA_NAMES = ["object 3", "object 7", "object 8"]
+_RT_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+
+
+def _kit_encabezado(slide) -> dict[str, tuple[Any, dict[str, Any]]]:
+    """Copia PRISTINA (antes del relleno) de los shapes de encabezado/banda de la página de
+    INTELIGENCIA, junto con las partes de imagen que referencian (logo)."""
+    kit = {}
+    for sh in slide.shapes:
+        if sh.name in _HDR_NAMES + _BANDA_NAMES:
+            el = deepcopy(sh._element)
+            imgs = {}
+            for node in el.iter():
+                rid = node.get(qn("r:embed"))
+                if rid:
+                    imgs[rid] = slide.part.related_part(rid)
+            kit[sh.name] = (el, imgs)
+    return kit
+
+
+def _clonar(slide, kit, name):
+    el0, imgs = kit[name]
+    el = deepcopy(el0)
+    remap = {old: slide.part.relate_to(part, _RT_IMAGE) for old, part in imgs.items()}
+    for node in el.iter():
+        rid = node.get(qn("r:embed"))
+        if rid in remap:
+            node.set(qn("r:embed"), remap[rid])
+    slide.shapes._spTree.append(el)
+    return slide.shapes[-1]
+
+
+def _fmt_val(v: float) -> str:
+    if float(v).is_integer():
+        return _miles(v)
+    return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _valor_num(v: Any) -> float | None:
+    """Número de un valor de gráfico: int/float tal cual; texto con la convención '.'=miles."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    return _num(v)
+
+
+def _chart_generico(estilo: str, categorias: list, valores: list) -> bytes | None:
+    pares = [(str(c), _valor_num(v)) for c, v in zip(categorias or [], valores or [])]
+    pares = [(c, v) for c, v in pares if c and v is not None]
+    if not pares:
+        return None
+    cs, vs = [c for c, _ in pares], [v for _, v in pares]
+    if estilo == "dona":
+        fig, ax = plt.subplots(figsize=(5.2, 3.2))
+        ax.pie(vs, labels=[f"{c}\n{_fmt_val(v)}" for c, v in pares],
+               colors=[_PALETA[i % len(_PALETA)] for i in range(len(vs))], startangle=90,
+               wedgeprops={"width": 0.42, "edgecolor": "white"},
+               textprops={"fontsize": 9, "color": "#333"})
+        ax.set(aspect="equal")
+        return _fig_png(fig)
+    if estilo == "barras_h":
+        fig, ax = plt.subplots(figsize=(6.4, max(1.8, 0.45 * len(cs) + 0.8)))
+        barras = ax.barh(cs, vs, color=NAVY, height=0.62)
+        ax.invert_yaxis()
+        ax.set_xlim(0, max(max(vs) * 1.2, 1))
+        ax.bar_label(barras, labels=[_fmt_val(v) for v in vs], padding=4, fontsize=9, color="#333")
+    else:
+        fig, ax = plt.subplots(figsize=(6.4, 3.2))
+        barras = ax.bar(cs, vs, color=NAVY, width=0.55)
+        ax.set_ylim(0, max(max(vs) * 1.2, 1))
+        ax.bar_label(barras, labels=[_fmt_val(v) for v in vs], padding=3, fontsize=9, color="#333")
+        if len(cs) > 5 or max(len(c) for c in cs) > 10:
+            plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
+    ax.tick_params(labelsize=9)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    return _fig_png(fig)
+
+
+def _tam_png(png: bytes, max_w: int, max_h: int) -> tuple[int, int] | None:
+    try:
+        w, h = PILImage.open(io.BytesIO(png)).size
+    except Exception:
+        return None
+    if w <= 0 or h <= 0:
+        return None
+    esc = min(max_w / w, max_h / h)
+    return int(w * esc), int(h * esc)
+
+
+def _color(rgb: str) -> RGBColor:
+    return RGBColor.from_string(rgb.lstrip("#").upper())
+
+
+class _HojaBuilder:
+    """Construye las páginas de UNA hoja adicional (paginando si hace falta)."""
+
+    def __init__(self, prs, kit, base_layout, hoja: dict, fstr: str):
+        self.prs, self.kit, self.layout = prs, kit, base_layout
+        self.hoja, self.fstr = hoja, fstr
+        self.slides: list = []
+        self.slide = None
+        self.y = _HOJA_TOP
+        self.n_banda = 0
+        self.vacia = True
+        self._nueva_pagina()
+
+    # ---- páginas ----
+    def _nueva_pagina(self) -> None:
+        slide = self.prs.slides.add_slide(self.layout)
+        for ph in list(slide.placeholders):
+            ph._element.getparent().remove(ph._element)
+        for name in _HDR_NAMES:
+            if name in self.kit:
+                _clonar(slide, self.kit, name)
+        nm = _by_name(slide)
+        seccion = _clean(self.hoja.get("seccion")).upper() or "INFORMACIÓN ADICIONAL"
+        titulo = _clean(self.hoja.get("titulo")).upper() or "INFORMACIÓN ADICIONAL"
+        if self.slides:
+            titulo += " (CONT.)"
+        sec, tit, fec = nm.get("object 15"), nm.get("object 16"), nm.get("object 17")
+        if sec is not None:
+            _set_text(sec.text_frame, seccion)
+            _shape_fit(sec, pt=_fit_pt(seccion, TREBUCHET, 1.70, 20, 8, True), wrap=False)
+        if tit is not None:
+            _move(tit, left=Inches(2.80), width=Inches(4.55))
+            _set_text(tit.text_frame, titulo)
+            _shape_fit(tit, pt=_fit_pt(titulo, TREBUCHET, 4.40, 28, 12, True), wrap=False)
+        if fec is not None:
+            _set_text(fec.text_frame, self.fstr)
+            _shape_fit(fec, pt=15.5, wrap=False)
+        # El tracking negativo horneado en cada palabra de la plantilla apelmaza un título
+        # de una sola corrida: se neutraliza (spc=0) en sección y título.
+        for sh in (sec, tit):
+            if sh is not None:
+                for r in sh.text_frame.paragraphs[0].runs:
+                    r._r.get_or_add_rPr().set("spc", "0")
+        self.slide = slide
+        self.slides.append(slide)
+        self.y = _HOJA_TOP
+
+    def _libre(self) -> int:
+        return _HOJA_BOTTOM - self.y
+
+    def _asegurar(self, h: int) -> None:
+        """Abre página nueva si `h` no cabe y la actual ya tiene contenido."""
+        if h > self._libre() and self.y > _HOJA_TOP:
+            self._nueva_pagina()
+
+    # ---- piezas ----
+    def _banda(self, titulo: str) -> None:
+        self.n_banda += 1
+        grupo = _clonar(self.slide, self.kit, "object 3")
+        num = _clonar(self.slide, self.kit, "object 7")
+        txt = _clonar(self.slide, self.kit, "object 8")
+        _move(grupo, left=_HOJA_X, top=self.y, width=_HOJA_W)
+        _move(num, left=_HOJA_X + Inches(0.10), top=self.y + Inches(0.05))
+        _set_text(num.text_frame, f"{self.n_banda}.")
+        t = titulo.upper()
+        _move(txt, left=_HOJA_X + Inches(0.75), top=self.y + Inches(0.05), width=_HOJA_W - Inches(0.9))
+        _set_text(txt.text_frame, t)
+        _shape_fit(txt, pt=_fit_pt(t, TREBUCHET, (_HOJA_W - Inches(0.9)) / 914400, 15.5, 9, True),
+                   wrap=False)
+        for r in txt.text_frame.paragraphs[0].runs:
+            rPr = r._r.get_or_add_rPr()
+            if rPr.get("spc"):
+                del rPr.attrib["spc"]
+        self.y += _BANDA_H + Inches(0.08)
+
+    def _titulo_bloque(self, titulo: str, min_contenido: float = 0.9) -> None:
+        """Banda de título; no queda huérfana al pie de página."""
+        if not titulo:
+            return
+        self._asegurar(_BANDA_H + Inches(min_contenido))
+        self._banda(titulo)
+
+    def _alto_parrafos(self, paras: list[str], pt: float, w_in: float, bold=False) -> int:
+        h = 0.0
+        for p in paras:
+            h += _wrap_lines(p, CALIBRI, pt, w_in, bold) * pt * 1.22 / 72 + 4 / 72
+        return int(Inches(h + 0.10))
+
+    def _parrafos(self, paras: list[str], pt: float = 11, bullet: bool = False) -> None:
+        """Flujo de párrafos con salto de página (parte un párrafo gigante por palabras)."""
+        w_in = _HOJA_W / 914400 - 0.10 - (0.22 if bullet else 0)
+        paras = [p for p in paras if p.strip()]
+        i = 0
+        while i < len(paras):
+            h_acum, n = 0, 0
+            while i + n < len(paras):
+                ph = self._alto_parrafos([paras[i + n]], pt, w_in)
+                if h_acum + ph > self._libre():
+                    break
+                h_acum += ph
+                n += 1
+            if n == 0:
+                if self.y > _HOJA_TOP + Inches(0.5):
+                    self._nueva_pagina()
+                    continue
+                palabras = paras[i].split()
+                k = 1
+                while k < len(palabras) and self._alto_parrafos(
+                        [" ".join(palabras[:k + 1])], pt, w_in) <= self._libre():
+                    k += 1
+                if k < len(palabras):
+                    paras[i:i + 1] = [" ".join(palabras[:k]), " ".join(palabras[k:])]
+                n, h_acum = 1, self._alto_parrafos([paras[i]], pt, w_in)
+            chunk = paras[i:i + n]
+            self._caja_texto(chunk, pt, h_acum, bullet)
+            self.y += h_acum
+            i += n
+            if i < len(paras):
+                self._nueva_pagina()
+
+    def _caja_texto(self, paras: list[str], pt: float, h: int, bullet: bool) -> None:
+        tb = self.slide.shapes.add_textbox(_HOJA_X, self.y, _HOJA_W, h)
+        tf = tb.text_frame
+        tf.word_wrap = True
+        tf.auto_size = MSO_AUTO_SIZE.NONE
+        tf.margin_left = tf.margin_right = Inches(0.05)
+        tf.margin_top = tf.margin_bottom = Inches(0.03)
+        for k, t in enumerate(paras):
+            p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+            p.space_after = Pt(4)
+            if bullet:
+                pPr = p._p.get_or_add_pPr()
+                pPr.set("marL", str(int(Inches(0.22))))
+                pPr.set("indent", str(-int(Inches(0.22))))
+                pPr.append(parse_xml(f'<a:buChar {nsdecls("a")} char="&#8226;"/>'))
+            r = p.add_run()
+            r.text = t
+            r.font.size = Pt(pt)
+            r.font.name = CALIBRI
+            r.font.color.rgb = _color("262626")
+
+    # ---- bloques ----
+    def bloque(self, b: dict) -> None:
+        tipo = b.get("tipo")
+        titulo = _clean(b.get("titulo"))
+        if tipo == "texto":
+            paras = [p for p in str(b.get("texto") or "").splitlines() if p.strip()]
+            if paras:
+                self._titulo_bloque(titulo)
+                self._parrafos(paras)
+                self.vacia = False
+        elif tipo == "vinetas":
+            items = [_clean(x) for x in (b.get("items") or []) if _clean(x)]
+            if items:
+                self._titulo_bloque(titulo)
+                self._parrafos(items, bullet=True)
+                self.vacia = False
+        elif tipo == "tabla":
+            self._tabla(titulo, b)
+        elif tipo == "kpis":
+            self._kpis(titulo, b)
+        elif tipo == "grafico":
+            png = _chart_generico(str(b.get("estilo") or "barras"), b.get("categorias") or [],
+                                  b.get("valores") or [])
+            self._imagen_png(titulo, png, max_h=Inches(3.6), pie="")
+        elif tipo == "imagen":
+            self._imagen(titulo, b)
+
+    def _imagen(self, titulo: str, b: dict) -> None:
+        objeto = _clean(b.get("objeto"))
+        if not objeto:
+            return
+        try:
+            from .. import storage
+            png = storage.get_bytes(objeto)
+        except Exception:
+            return  # imagen no disponible: se omite el bloque, no se rompe el export
+        self._imagen_png(titulo, png, max_h=Inches(5.2), pie=_clean(b.get("pie")))
+
+    def _imagen_png(self, titulo: str, png: bytes | None, max_h: int, pie: str) -> None:
+        if not png:
+            return
+        tam = _tam_png(png, int(_HOJA_W), int(max_h))
+        if tam is None:
+            return
+        w, h = tam
+        pie_h = Inches(0.30) if pie else 0
+        self._titulo_bloque(titulo, min_contenido=h / 914400)
+        self._asegurar(h + pie_h)
+        if h + pie_h > self._libre():  # imagen más alta que lo que queda de una página limpia
+            esc = self._libre() / (h + pie_h)
+            w, h = int(w * esc), int(h * esc)
+        self.slide.shapes.add_picture(io.BytesIO(png), _HOJA_X + (_HOJA_W - w) // 2, self.y, w, h)
+        self.y += h + Inches(0.05)
+        if pie:
+            self._caja_texto([pie], 9, int(pie_h), False)
+            self.y += pie_h
+        self.y += Inches(0.15)
+        self.vacia = False
+
+    def _kpis(self, titulo: str, b: dict) -> None:
+        items = []
+        for it in b.get("items") or []:
+            if isinstance(it, dict):
+                et, val = _clean(it.get("etiqueta")), _clean(it.get("valor"))
+            else:
+                et, val = "", _clean(it)
+            if et or val:
+                items.append((et, val))
+        if not items:
+            return
+        por_fila = min(4, len(items))
+        gap = Inches(0.12)
+        w = int((_HOJA_W - gap * (por_fila - 1)) / por_fila)
+        h = Inches(0.95)
+        self._titulo_bloque(titulo, min_contenido=1.0)
+        for ini in range(0, len(items), por_fila):
+            self._asegurar(h)
+            for k, (et, val) in enumerate(items[ini:ini + por_fila]):
+                x = _HOJA_X + k * (w + gap)
+                box = self.slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, self.y, w, h)
+                box.fill.solid()
+                box.fill.fore_color.rgb = _color(NAVY)
+                box.line.fill.background()
+                box.shadow.inherit = False
+                tf = box.text_frame
+                tf.word_wrap = True
+                tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+                tf.margin_left = tf.margin_right = Inches(0.06)
+                w_in = w / 914400 - 0.14
+                p1 = tf.paragraphs[0]
+                p1.alignment = PP_ALIGN.CENTER
+                r1 = p1.add_run()
+                r1.text = et.upper()
+                r1.font.size = Pt(_fit_pt(et.upper(), FGM, w_in, 10, 6))
+                r1.font.name = FGM
+                r1.font.color.rgb = _color(CELESTE)
+                p2 = tf.add_paragraph()
+                p2.alignment = PP_ALIGN.CENTER
+                r2 = p2.add_run()
+                r2.text = val
+                r2.font.size = Pt(_fit_pt(val, TREBUCHET, w_in, 22, 8, True))
+                r2.font.name = TREBUCHET
+                r2.font.bold = True
+                r2.font.color.rgb = _color("FFFFFF")
+            self.y += h + gap
+        self.y += Inches(0.05)
+        self.vacia = False
+
+    def _tabla(self, titulo: str, b: dict) -> None:
+        cols = [_clean(c) or " " for c in (b.get("columnas") or [])]
+        filas = [[(_clean(c) if c is not None else "") for c in f]
+                 for f in (b.get("filas") or []) if isinstance(f, (list, tuple))]
+        if not cols and filas:
+            cols = [f"COL {i + 1}" for i in range(max(len(f) for f in filas))]
+        filas = [(f + [""] * len(cols))[:len(cols)] for f in filas]
+        filas = [f for f in filas if any(f)]
+        if not cols or not filas:
+            return
+        # Anchos proporcionales al contenido (mín. 0.6").
+        pesos = [max(6, min(40, max([len(cols[i])] + [len(f[i]) for f in filas]))) for i in range(len(cols))]
+        total_w = int(_HOJA_W)
+        min_w = int(Inches(0.6))
+        anchos = [max(min_w, int(total_w * p / sum(pesos))) for p in pesos]
+        anchos[-1] += total_w - sum(anchos)
+        pt = 9.5
+
+        def alto_fila(celdas: list[str], bold: bool) -> int:
+            lin = max(_wrap_lines(c, CALIBRI, pt, a / 914400 - 0.18, bold) for c, a in zip(celdas, anchos))
+            return int(Inches(max(0.28, lin * pt * 1.22 / 72 + 0.12)))
+
+        h_cab = alto_fila(cols, True)
+        self._titulo_bloque(titulo, min_contenido=(h_cab + alto_fila(filas[0], False)) / 914400)
+        i = 0
+        while i < len(filas):
+            self._asegurar(h_cab + alto_fila(filas[i], False))
+            chunk, h = [], h_cab
+            while i < len(filas):
+                hf = alto_fila(filas[i], False)
+                if chunk and h + hf > self._libre():
+                    break
+                chunk.append((filas[i], hf))
+                h += hf
+                i += 1
+            self._dibujar_tabla(cols, chunk, anchos, h_cab, pt)
+            self.y += h + Inches(0.15)
+            if i < len(filas):
+                self._nueva_pagina()
+        self.vacia = False
+
+    def _dibujar_tabla(self, cols, chunk, anchos, h_cab, pt) -> None:
+        shape = self.slide.shapes.add_table(len(chunk) + 1, len(cols), _HOJA_X, self.y, _HOJA_W,
+                                            h_cab + sum(h for _, h in chunk))
+        tbl = shape.table
+        tbl.horz_banding = False
+        for ci, a in enumerate(anchos):
+            tbl.columns[ci].width = a
+        tbl.rows[0].height = h_cab
+        for ri, (_, hf) in enumerate(chunk, start=1):
+            tbl.rows[ri].height = hf
+
+        def celda(r, c, texto, cab, zebra):
+            cell = tbl.cell(r, c)
+            cell.margin_left = cell.margin_right = Inches(0.08)
+            cell.margin_top = cell.margin_bottom = Inches(0.04)
+            cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+            _set_cell(cell, texto, pt, bold=cab, font=CALIBRI)
+            for p in cell.text_frame.paragraphs:
+                for run in p.runs:
+                    run.font.color.rgb = _color("FFFFFF" if cab else "262626")
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = _color(NAVY if cab else ("EAF1FB" if zebra else "FFFFFF"))
+            for edge in _LN_EDGES:
+                _set_cell_border(cell, edge, "BFBFBF")
+
+        for c, t in enumerate(cols):
+            celda(0, c, t.upper(), True, False)
+        for ri, (fila, _) in enumerate(chunk, start=1):
+            for c, t in enumerate(fila):
+                celda(ri, c, t, False, ri % 2 == 0)
+
+    def cerrar(self) -> list:
+        if self.vacia:
+            tb = self.slide.shapes.add_textbox(_HOJA_X, _HOJA_TOP, _HOJA_W, Inches(0.5))
+            r = tb.text_frame.paragraphs[0].add_run()
+            r.text = "-.-"
+            r.font.size = Pt(14)
+            r.font.name = CALIBRI
+            r.font.color.rgb = _color("7F7F7F")
+        return self.slides
+
+
+def _hojas_adicionales(prs, kit, contenido: dict, fstr: str, n_orig: int) -> None:
+    """Agrega las hojas del usuario e inserta cada una tras la página `despues_de`."""
+    hojas = [h for h in (_get(contenido, "hojas_adicionales") or []) if isinstance(h, dict)]
+    if not hojas or not kit:
+        return
+    lst = prs.slides._sldIdLst
+    orig_ids = list(lst)[:n_orig]
+    layout = prs.slides[2].slide_layout
+    despues: dict[int, list] = {}
+    al_final: list = []
+    for h in hojas:
+        antes = len(lst)
+        constructor = _HojaBuilder(prs, kit, layout, h, fstr)
+        for b in h.get("bloques") or []:
+            if isinstance(b, dict):
+                constructor.bloque(b)
+        constructor.cerrar()
+        ids = list(lst)[antes:]
+        d = h.get("despues_de")
+        if isinstance(d, int) and not isinstance(d, bool) and 0 <= d < n_orig:
+            despues.setdefault(d, []).extend(ids)
+        else:
+            al_final.extend(ids)
+    for el in list(lst):
+        lst.remove(el)
+    for i, el in enumerate(orig_ids):
+        lst.append(el)
+        for x in despues.get(i, []):
+            lst.append(x)
+    for x in al_final:
+        lst.append(x)
+
+
+# ---------------------------------------------------------------------------
 #  PPTX -> PDF (LibreOffice headless) — python-pptx no exporta PDF
 # ---------------------------------------------------------------------------
 def _pptx_a_pdf(data: bytes) -> bytes:
@@ -1360,12 +1835,19 @@ def _pptx_a_pdf(data: bytes) -> bytes:
             return fh.read()
 
 
-def generar_pdf(contenido: dict[str, Any], titulo: str, fecha: datetime) -> bytes:
-    """Rellena la plantilla institucional y devuelve el PDF final (RF-008)."""
+def construir_pptx(contenido: dict[str, Any], fecha: datetime) -> bytes:
+    """Rellena la plantilla, agrega las hojas adicionales del usuario y devuelve el .pptx."""
     prs = Presentation(_TEMPLATE)
     slides = list(prs.slides)
+    kit = _kit_encabezado(slides[2])  # antes del relleno: encabezado/banda pristinos
     _rellenar(slides, contenido, fecha)
     _graficos(prs, slides, contenido)
+    _hojas_adicionales(prs, kit, contenido, _fecha_es(fecha), len(slides))
     buf = io.BytesIO()
     prs.save(buf)
-    return _pptx_a_pdf(buf.getvalue())
+    return buf.getvalue()
+
+
+def generar_pdf(contenido: dict[str, Any], titulo: str, fecha: datetime) -> bytes:
+    """Rellena la plantilla institucional y devuelve el PDF final (RF-008)."""
+    return _pptx_a_pdf(construir_pptx(contenido, fecha))
