@@ -37,6 +37,9 @@ jobs:
       - name: Configurar .env
         run: |
           cp .env.example .env
+          # El CI usa Gemini (proveedor activo del sistema y del juez del robot), sin depender
+          # del valor por defecto de .env.example.
+          sed -i "s|^LLM_PROVIDER=.*|LLM_PROVIDER=gemini|" .env
           if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
             sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|" .env
           fi

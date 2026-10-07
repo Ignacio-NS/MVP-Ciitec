@@ -31,9 +31,10 @@ Aplicación web interna, despliegue on-premise, monorepo, arquitectura en capas:
 - **Capa 4 — Datos:** PostgreSQL + pgvector (relacional + vectorial en una sola
   BD), MinIO (documentos originales), audit log inmutable.
 
-**Stack:** React+TS · FastAPI · Celery+Redis · Nginx · OpenAI vía API (SDK
-`openai`, detrás de una interfaz pluggable para migrar a modelo local en
-producción) · `sentence-transformers` para embeddings (local) · PostgreSQL +
+**Stack:** React+TS · FastAPI · Celery+Redis · Nginx · LLM detrás de la
+interfaz pluggable `LLMProvider` (por defecto Gemini 2.5 Flash; también Claude,
+modelo local con Ollama/vLLM y nube privada por endpoint OpenAI-compatible; se
+elige solo con `LLM_PROVIDER`, ver README) · `sentence-transformers` para embeddings (local) · PostgreSQL +
 pgvector · MinIO.
 
 **Flujo:** Carga → Encola → Procesa → Valida → Entrega.

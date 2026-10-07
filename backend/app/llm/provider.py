@@ -1,10 +1,12 @@
 """
 Abstracción del proveedor de LLM.
 
-Toda la lógica del sistema habla con esta interfaz, NUNCA con DeepSeek/Gemini/Groq/OpenAI
-directamente. En el MVP se usa DeepSeek (endpoint OpenAI-compatible, pagado); en producción
-se reemplaza por un modelo local (clasificación de datos) implementando LocalLLMProvider
-y seteando LLM_PROVIDER=local, sin tocar el resto del código.
+Toda la lógica del sistema habla con esta interfaz (`LLMProvider`), NUNCA con Gemini/Claude/DeepSeek/
+OpenAI directamente. El proveedor se elige solo con `LLM_PROVIDER` (registro `_PROVIDERS`), sin tocar el
+pipeline. Proveedor activo por defecto: Gemini 2.5 Flash. Modalidades de resguardo de la información:
+  - API pública del proveedor:  gemini · anthropic · deepseek · groq · github
+  - Nube privada o dedicada:    openai_compat (Azure OpenAI, Vertex AI, Bedrock, gateway institucional)
+  - Modelo local en la red:     local (Ollama / vLLM, modelos de pesos abiertos)
 
 El LLM no garantiza JSON-schema estricto, así que cada método:
   1) pide JSON con prompts MUY explícitos en español,
@@ -17,6 +19,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import ValidationError
@@ -152,7 +155,7 @@ respaldan (solo ids que existan en los hechos entregados)."""
 
 
 class LLMProvider(ABC):
-    """Contrato que cumple cualquier proveedor (Groq hoy, modelo local mañana)."""
+    """Contrato que cumple cualquier proveedor (nube pública, nube privada o modelo local)."""
 
     @abstractmethod
     def extraer_hechos(self, texto: str) -> list[dict[str, Any]]: ...
@@ -198,57 +201,83 @@ def _try_repair_json(raw: str) -> dict[str, Any] | None:
         return None
 
 
-class _OpenAICompatProvider(LLMProvider):
-    """Base para back-ends con API estilo OpenAI (Groq, GitHub Models).
+def _exigir(valor: str, variable: str) -> str:
+    """Falla con un mensaje claro si falta una variable de configuración del proveedor."""
+    if not valor:
+        raise LLMError(f"{variable} no configurada")
+    return valor
 
-    Las subclases solo configuran `client`, `model` y `max_retries`; toda la
-    lógica de prompts/JSON/reintentos vive aquí.
+
+@dataclass
+class _Respuesta:
+    """Resultado normalizado de UNA llamada al modelo, sea cual sea el protocolo del proveedor."""
+
+    texto: str
+    truncado: bool = False          # el modelo se cortó por el tope de tokens de salida
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+
+
+class _ChatJSONProvider(LLMProvider):
+    """Lógica común a todo proveedor: prompts, JSON, reintentos, truncado y registro de uso.
+
+    Las subclases solo implementan `_llamar` (una llamada al modelo) y configuran `model`,
+    `max_retries` y, si hace falta, los techos de tokens.
     """
 
-    client: Any
+    nombre: str = "?"
     model: str
     max_retries: int
     max_output_tokens: int = settings.llm_max_output_tokens
     # Techo al que se puede escalar max_tokens si la salida se trunca (depende del modelo).
     max_output_techo: int = settings.llm_max_output_tokens
-    # Parámetros extra por proveedor (p.ej. Gemini necesita reasoning_effort="none"
-    # para no gastar tiempo/tokens en "thinking" interno antes del JSON final).
-    extra_create_kwargs: dict[str, Any] = {}
 
-    def _chat_json(self, system: str, user: str) -> dict[str, Any]:
+    def _llamar(self, system: str, user: str, max_tokens: int) -> _Respuesta:
+        raise NotImplementedError
+
+    def _error_definitivo(self, e: Exception) -> bool:
+        """True si reintentar no sirve (p.ej. clave inválida): se falla de inmediato."""
+        return False
+
+    def _log_uso(self, operacion: str, intento: int, latencia: float, resultado: str,
+                 resp: _Respuesta | None, falla: Exception | None) -> None:
+        """Una línea por llamada, SOLO metadatos: nunca el contenido de prompts ni respuestas
+        (los documentos pueden ser clasificados). De una excepción se registra solo su tipo."""
+        logger.info(
+            "llm_call provider=%s model=%s op=%s intento=%d/%d latencia_s=%.2f "
+            "tokens_in=%s tokens_out=%s resultado=%s%s",
+            self.nombre, self.model, operacion, intento, self.max_retries, latencia,
+            resp.tokens_in if resp else None, resp.tokens_out if resp else None, resultado,
+            f" error={type(falla).__name__}" if falla else "",
+        )
+
+    def _chat_json(self, system: str, user: str, operacion: str = "-") -> dict[str, Any]:
         """Pide JSON al modelo y reintenta con backoff.
 
-        Una respuesta cortada por el tope de tokens (finish_reason="length") NUNCA se acepta
-        "reparada": json_repair cierra las llaves y Pydantic rellena con vacíos todo lo que
-        faltaba (secciones enteras sin datos, guardadas como un briefing válido). En ese caso
-        se reintenta con más tokens de salida y, si ya no se puede, se falla con LLMError.
-        json_repair solo se usa para JSON mal formado que NO se truncó.
+        Una respuesta cortada por el tope de tokens NUNCA se acepta "reparada": json_repair
+        cierra las llaves y Pydantic rellena con vacíos todo lo que faltaba (secciones enteras
+        sin datos, guardadas como un briefing válido). En ese caso se reintenta con más tokens
+        de salida y, si ya no se puede, se falla con LLMError. json_repair solo se usa para JSON
+        mal formado que NO se truncó.
         """
         last_err: Exception | None = None
         max_tokens = self.max_output_tokens
-        for intento in range(self.max_retries):
+        for intento in range(1, self.max_retries + 1):
+            t0 = time.perf_counter()
+            resp: _Respuesta | None = None
+            resultado, falla, latencia = "error", None, None
             try:
-                resp = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    response_format={"type": "json_object"},
-                    temperature=0.1,
-                    max_tokens=max_tokens,
-                    **self.extra_create_kwargs,
-                )
-                choice = resp.choices[0]
-                truncado = choice.finish_reason == "length"
-                raw = _strip_fences(choice.message.content or "")
+                resp = self._llamar(system, user, max_tokens)
+                latencia = time.perf_counter() - t0
+                raw = _strip_fences(resp.texto)
                 try:
-                    return json.loads(raw)  # JSON completo y válido (aunque roce el tope)
+                    data = json.loads(raw)  # JSON completo y válido (aunque roce el tope)
                 except json.JSONDecodeError as e:
-                    if truncado:
+                    if resp.truncado:
+                        resultado = "truncado"
                         logger.warning(
-                            "Salida LLM truncada (finish_reason=length, max_tokens=%s, usage=%s)",
-                            max_tokens, getattr(resp, "usage", None),
+                            "Salida LLM truncada (provider=%s, max_tokens=%s, tokens_out=%s)",
+                            self.nombre, max_tokens, resp.tokens_out,
                         )
                         if max_tokens < self.max_output_techo:
                             max_tokens = min(max_tokens * 2, self.max_output_techo)
@@ -261,19 +290,31 @@ class _OpenAICompatProvider(LLMProvider):
                         ) from e
                     # JSON mal formado pero completo: intentar reparar (comas, comillas).
                     reparado = _try_repair_json(raw)
-                    if reparado is not None:
-                        return reparado
-                    raise
-            except LLMError:
-                raise  # error definitivo (truncación irreparable): no reintentar
+                    if reparado is None:
+                        resultado = "json_invalido"
+                        raise
+                    resultado = "ok_reparado"
+                    return reparado
+                resultado = "ok"
+                return data
+            except LLMError as e:
+                falla = e
+                raise  # error definitivo (truncación irreparable, rechazo): no reintentar
             except Exception as e:  # red, JSON inválido transitorio, etc.
-                last_err = e
-                if intento < self.max_retries - 1:
-                    time.sleep(2 ** intento)  # 1s, 2s, 4s...
+                falla = last_err = e
+                latencia = time.perf_counter() - t0 if latencia is None else latencia
+                if self._error_definitivo(e):
+                    raise LLMError(f"Error no recuperable de {self.nombre}: {e}") from e
+                if intento < self.max_retries:
+                    time.sleep(2 ** (intento - 1))  # 1s, 2s, 4s...
+            finally:
+                self._log_uso(operacion, intento,
+                              time.perf_counter() - t0 if latencia is None else latencia,
+                              resultado, resp, falla)
         raise LLMError(f"LLM falló tras {self.max_retries} intentos: {last_err}")
 
     def extraer_hechos(self, texto: str) -> list[dict[str, Any]]:
-        data = self._chat_json(_EXTRACT_SYS, texto)
+        data = self._chat_json(_EXTRACT_SYS, texto, "extraer_hechos")
         try:
             parsed = HechosResponse.model_validate(data)
         except ValidationError as e:
@@ -282,7 +323,7 @@ class _OpenAICompatProvider(LLMProvider):
 
     def sintetizar_briefing(self, hechos: list[dict[str, Any]], parametros: dict[str, Any]) -> dict[str, Any]:
         payload = json.dumps({"hechos": hechos, "parametros": parametros}, ensure_ascii=False)
-        data = self._chat_json(_SYNTH_SYS, payload)
+        data = self._chat_json(_SYNTH_SYS, payload, "sintetizar_briefing")
         try:
             return BriefingOut.model_validate(data).model_dump()
         except ValidationError as e:
@@ -292,7 +333,7 @@ class _OpenAICompatProvider(LLMProvider):
         if len(hechos) < 2:
             return []
         payload = json.dumps({"hechos": hechos}, ensure_ascii=False)
-        data = self._chat_json(_CONTRA_SYS, payload)
+        data = self._chat_json(_CONTRA_SYS, payload, "detectar_contradicciones")
         try:
             return [c.model_dump() for c in ContradiccionesResponse.model_validate(data).contradicciones]
         except ValidationError:
@@ -314,44 +355,56 @@ class _OpenAICompatProvider(LLMProvider):
             },
             ensure_ascii=False,
         )
-        data = self._chat_json(_HOJA_SYS, payload)
+        data = self._chat_json(_HOJA_SYS, payload, "completar_hoja")
         try:
             return HojaCompletada.model_validate(data).model_dump()
         except ValidationError as e:
             raise LLMError(f"Hoja con formato inválido: {e}")
 
 
-class DeepSeekProvider(_OpenAICompatProvider):
-    """DeepSeek (endpoint OpenAI-compatible) — proveedor activo (pagado)."""
+class _OpenAICompatProvider(_ChatJSONProvider):
+    """Base para back-ends con API estilo OpenAI (chat.completions): Gemini, DeepSeek, Groq,
+    GitHub Models, un gateway/nube privada (`openai_compat`) o un servidor local (Ollama, vLLM).
 
-    def __init__(self) -> None:
-        from openai import OpenAI  # import perezoso
+    Las subclases solo configuran `client`, `model` y `max_retries`.
+    """
 
-        if not settings.deepseek_api_key:
-            raise LLMError("DEEPSEEK_API_KEY no configurada")
-        self.client = OpenAI(
-            base_url=settings.deepseek_base_url,
-            api_key=settings.deepseek_api_key,
+    client: Any
+    # Parámetros extra por proveedor (p.ej. Gemini necesita reasoning_effort="none"
+    # para no gastar tiempo/tokens en "thinking" interno antes del JSON final).
+    extra_create_kwargs: dict[str, Any] = {}
+    # False -> no se envía response_format={"type": "json_object"} (algunos endpoints lo rechazan):
+    # el JSON lo garantiza el prompt y la reparación de JSON.
+    json_mode: bool = True
+
+    def _llamar(self, system: str, user: str, max_tokens: int) -> _Respuesta:
+        kwargs: dict[str, Any] = dict(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            temperature=0.1,
+            max_tokens=max_tokens,
+            **self.extra_create_kwargs,
         )
-        self.model = settings.deepseek_model
-        self.max_retries = settings.llm_max_retries
-
-
-class GroqProvider(_OpenAICompatProvider):
-    def __init__(self) -> None:
-        from groq import Groq  # import perezoso
-
-        if not settings.groq_api_key:
-            raise LLMError("GROQ_API_KEY no configurada")
-        self.client = Groq(api_key=settings.groq_api_key)
-        self.model = settings.groq_model
-        self.max_retries = settings.groq_max_retries
-        self.max_output_techo = max(self.max_output_tokens, 32768)  # tope de Llama 3.3 70B en Groq
+        if self.json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        resp = self.client.chat.completions.create(**kwargs)
+        choice = resp.choices[0]
+        usage = getattr(resp, "usage", None)
+        return _Respuesta(
+            texto=choice.message.content or "",
+            truncado=choice.finish_reason == "length",
+            tokens_in=getattr(usage, "prompt_tokens", None),
+            tokens_out=getattr(usage, "completion_tokens", None),
+        )
 
 
 class GeminiProvider(_OpenAICompatProvider):
-    """Gemini (Google) vía su endpoint OpenAI-compatible."""
+    """Gemini (Google) vía su endpoint OpenAI-compatible — proveedor activo por defecto."""
 
+    nombre = "gemini"
     # gemini-2.5-flash/flash-lite "piensan" por defecto (tokens de razonamiento
     # internos antes del JSON final), lo que suma latencia real al presupuesto
     # de generación sin aportar al resultado (no citamos el thinking). "none"
@@ -360,10 +413,9 @@ class GeminiProvider(_OpenAICompatProvider):
     extra_create_kwargs: dict[str, Any] = {"reasoning_effort": "none"}
 
     def __init__(self) -> None:
+        _exigir(settings.gemini_api_key, "GEMINI_API_KEY")
         from openai import OpenAI  # import perezoso
 
-        if not settings.gemini_api_key:
-            raise LLMError("GEMINI_API_KEY no configurada")
         self.client = OpenAI(
             base_url=settings.gemini_base_url,
             api_key=settings.gemini_api_key,
@@ -374,14 +426,47 @@ class GeminiProvider(_OpenAICompatProvider):
         self.max_output_techo = max(self.max_output_tokens, 65536)
 
 
-class GitHubProvider(_OpenAICompatProvider):
-    """GitHub Models (endpoint OpenAI-compatible) — gpt-4o (legado)."""
+class DeepSeekProvider(_OpenAICompatProvider):
+    """DeepSeek (endpoint OpenAI-compatible)."""
+
+    nombre = "deepseek"
 
     def __init__(self) -> None:
+        _exigir(settings.deepseek_api_key, "DEEPSEEK_API_KEY")
         from openai import OpenAI  # import perezoso
 
-        if not settings.github_token:
-            raise LLMError("GITHUB_TOKEN no configurada")
+        self.client = OpenAI(
+            base_url=settings.deepseek_base_url,
+            api_key=settings.deepseek_api_key,
+        )
+        self.model = settings.deepseek_model
+        self.max_retries = settings.llm_max_retries
+
+
+class GroqProvider(_OpenAICompatProvider):
+    """Groq (Llama 3.3 70B)."""
+
+    nombre = "groq"
+
+    def __init__(self) -> None:
+        _exigir(settings.groq_api_key, "GROQ_API_KEY")
+        from groq import Groq  # import perezoso
+
+        self.client = Groq(api_key=settings.groq_api_key)
+        self.model = settings.groq_model
+        self.max_retries = settings.groq_max_retries
+        self.max_output_techo = max(self.max_output_tokens, 32768)  # tope de Llama 3.3 70B en Groq
+
+
+class GitHubProvider(_OpenAICompatProvider):
+    """GitHub Models (endpoint OpenAI-compatible) — gpt-4o."""
+
+    nombre = "github"
+
+    def __init__(self) -> None:
+        _exigir(settings.github_token, "GITHUB_TOKEN")
+        from openai import OpenAI  # import perezoso
+
         self.client = OpenAI(
             base_url=settings.github_base_url,
             api_key=settings.github_token,
@@ -390,30 +475,106 @@ class GitHubProvider(_OpenAICompatProvider):
         self.max_retries = settings.llm_max_retries
 
 
-class LocalLLMProvider(LLMProvider):
-    """Stub para producción: aquí entra el modelo local (clasificación de datos)."""
+class OpenAICompatProvider(_OpenAICompatProvider):
+    """Cualquier endpoint con API estilo OpenAI, configurado solo por entorno (LLM_BASE_URL,
+    LLM_API_KEY, LLM_MODEL): OpenAI directo, Azure OpenAI, Vertex AI, Bedrock por su endpoint
+    compatible o un gateway institucional. Pensado para la modalidad de nube privada/dedicada."""
 
-    def extraer_hechos(self, texto: str) -> list[dict[str, Any]]:
-        raise NotImplementedError("Implementar con el modelo local on-premise.")
+    nombre = "openai_compat"
 
-    def sintetizar_briefing(self, hechos: list[dict[str, Any]], parametros: dict[str, Any]) -> dict[str, Any]:
-        raise NotImplementedError("Implementar con el modelo local on-premise.")
+    def __init__(self) -> None:
+        _exigir(settings.llm_base_url, "LLM_BASE_URL")
+        _exigir(settings.llm_api_key, "LLM_API_KEY")
+        _exigir(settings.llm_model, "LLM_MODEL")
+        from openai import OpenAI  # import perezoso
 
-    def detectar_contradicciones(self, hechos: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        raise NotImplementedError("Implementar con el modelo local on-premise.")
+        self.client = OpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key)
+        self.model = settings.llm_model
+        self.max_retries = settings.llm_max_retries
+        self.json_mode = settings.llm_json_mode
 
-    def completar_hoja(self, hechos: list[dict[str, Any]], contexto: str, hoja: dict[str, Any]) -> dict[str, Any]:
-        raise NotImplementedError("Implementar con el modelo local on-premise.")
+
+class LocalLLMProvider(_OpenAICompatProvider):
+    """Modelo de pesos abiertos servido dentro de la red del Ejército con un servidor de API
+    estilo OpenAI (Ollama o vLLM). No requiere salida a internet ni clave."""
+
+    nombre = "local"
+
+    def __init__(self) -> None:
+        _exigir(settings.local_llm_base_url, "LOCAL_LLM_BASE_URL")
+        _exigir(settings.local_llm_model, "LOCAL_LLM_MODEL")
+        from openai import OpenAI  # import perezoso
+
+        # El SDK exige una clave no vacía aunque el servidor local no la use.
+        self.client = OpenAI(base_url=settings.local_llm_base_url,
+                             api_key=settings.local_llm_api_key or "local")
+        self.model = settings.local_llm_model
+        self.max_retries = settings.llm_max_retries
+        self.json_mode = settings.llm_json_mode
+
+
+class AnthropicProvider(_ChatJSONProvider):
+    """Claude (Anthropic) con el SDK oficial. No se usa el endpoint compatible con OpenAI: no
+    ofrece modo JSON ni es la vía soportada. El JSON lo garantiza el prompt + la reparación."""
+
+    nombre = "anthropic"
+    # Errores HTTP donde reintentar no sirve (clave inválida, modelo inexistente, petición mala).
+    _ERRORES_DEFINITIVOS = ("AuthenticationError", "PermissionDeniedError", "NotFoundError", "BadRequestError")
+
+    def __init__(self) -> None:
+        _exigir(settings.anthropic_api_key, "ANTHROPIC_API_KEY")
+        import anthropic  # import perezoso
+
+        self._sdk = anthropic
+        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.model = settings.anthropic_model
+        self.max_retries = settings.llm_max_retries
+        self.max_output_techo = max(self.max_output_tokens, 64000)
+
+    def _llamar(self, system: str, user: str, max_tokens: int) -> _Respuesta:
+        # Streaming: con max_tokens alto el SDK lo exige para evitar timeouts HTTP. No se envía
+        # `temperature` (los modelos Claude recientes lo rechazan) ni `thinking`.
+        with self.client.messages.stream(
+            model=self.model,
+            max_tokens=max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        ) as stream:
+            msg = stream.get_final_message()
+        if msg.stop_reason == "refusal":
+            raise LLMError("Claude rechazó la solicitud (stop_reason=refusal); no se reintenta.")
+        texto = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+        usage = getattr(msg, "usage", None)
+        return _Respuesta(
+            texto=texto,
+            truncado=msg.stop_reason == "max_tokens",
+            tokens_in=getattr(usage, "input_tokens", None),
+            tokens_out=getattr(usage, "output_tokens", None),
+        )
+
+    def _error_definitivo(self, e: Exception) -> bool:
+        clases = tuple(getattr(self._sdk, n) for n in self._ERRORES_DEFINITIVOS if hasattr(self._sdk, n))
+        return isinstance(e, clases)
+
+
+# Registro nombre -> clase. Agregar un proveedor es una línea aquí; el pipeline no cambia.
+_PROVIDERS: dict[str, type[LLMProvider]] = {
+    "gemini": GeminiProvider,
+    "anthropic": AnthropicProvider,
+    "deepseek": DeepSeekProvider,
+    "groq": GroqProvider,
+    "github": GitHubProvider,
+    "openai_compat": OpenAICompatProvider,
+    "local": LocalLLMProvider,
+}
 
 
 def get_llm_provider() -> LLMProvider:
-    proveedor = settings.llm_provider.lower()
-    if proveedor == "local":
-        return LocalLLMProvider()
-    if proveedor == "groq":
-        return GroqProvider()
-    if proveedor == "github":
-        return GitHubProvider()
-    if proveedor == "gemini":
-        return GeminiProvider()
-    return DeepSeekProvider()  # "deepseek" (por defecto)
+    nombre = (settings.llm_provider or "").strip().lower()
+    clase = _PROVIDERS.get(nombre)
+    if clase is None:
+        raise LLMError(
+            f"LLM_PROVIDER='{settings.llm_provider}' no es válido. "
+            f"Valores válidos: {', '.join(_PROVIDERS)}."
+        )
+    return clase()

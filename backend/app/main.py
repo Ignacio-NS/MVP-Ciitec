@@ -6,12 +6,18 @@ por eso los routers se montan sin el prefijo /api.
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import audit, auth, briefings, fuentes, ws
 from .auth.tokens import decodificar_token, renovar_token
 from .storage import ensure_bucket
+
+# uvicorn solo configura sus propios loggers: sin esto los logs INFO de la app (p.ej. el registro
+# de uso del LLM, `llm_call ...`) no saldrían en el proceso api (el worker Celery sí los muestra).
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Síntesis Automática de SITREP — CIITEC", version="1.0.0")
 

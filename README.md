@@ -16,8 +16,9 @@ cp .env.example .env          # copiar plantilla de variables
 
 Editar `.env` y completar como mínimo:
 
-- `DEEPSEEK_API_KEY`: clave de https://platform.deepseek.com/api_keys (sin esto,
-  la generación de briefings con IA falla; el resto de la app funciona igual).
+- `GEMINI_API_KEY`: clave de https://aistudio.google.com/apikey (proveedor por defecto; sin
+  esto la generación de briefings con IA falla; el resto de la app funciona igual). Para usar
+  otro modelo (Claude, uno local, una nube privada) ver «Proveedor LLM» más abajo.
 - `JWT_SECRET`: string largo y aleatorio.
 - `ENCRYPTION_KEY`: 32 bytes en base64, p.ej. `openssl rand -base64 32`.
 - Opcional pero recomendado: cambiar los `..._PASSWORD=cambiar_en_local`.
@@ -58,7 +59,7 @@ auditor/seguridad/admin.
 |---|---|
 | RF-001 ingesta | `backend/app/pipeline/ingesta.py` + `storage.py` (MinIO) |
 | RF-002 normalización | `pipeline/normalizacion.py` → `hechos.normalizado` |
-| RF-003 extracción | `pipeline/extraccion.py` + `llm/provider.py` (Groq, JSON + Pydantic) |
+| RF-003 extracción | `pipeline/extraccion.py` + `llm/provider.py` (`LLMProvider`, JSON + Pydantic) |
 | RF-004 generación | `pipeline/sintesis.py` (esquema institucional 6 págs) |
 | RF-005 inconsistencias | `pipeline/deteccion.py` (pgvector + reglas + LLM) |
 | RF-006 trazabilidad | `version_bullet_hechos` + `/briefings/{id}/trazabilidad` |
@@ -88,13 +89,46 @@ Ver [`robot-qa/README.md`](robot-qa/README.md) para el detalle completo.
 
 ## Notas
 
-- **Proveedor LLM (intercambiable):** `LLM_PROVIDER` selecciona el back-end sin
-  tocar el resto del código:
-  - `deepseek` (por defecto): DeepSeek vía endpoint OpenAI-compatible (`DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL=deepseek-chat`). Key en https://platform.deepseek.com/api_keys.
-  - `gemini` (legado): Gemini vía endpoint OpenAI-compatible (`GEMINI_API_KEY`, `GEMINI_MODEL=gemini-2.5-flash`). Key en https://aistudio.google.com/apikey.
-  - `github` (legado): GitHub Models, `openai/gpt-4o` (`GITHUB_TOKEN` = PAT con permiso Models).
-  - `groq` (legado): Groq Llama 3.3 70B (`GROQ_API_KEY`, `GROQ_MODEL=llama-3.3-70b-versatile`).
-  - `local`: modelo on-premise (clasificación de datos); implementar `LocalLLMProvider`.
+- **Proveedor LLM (intercambiable):** el sistema no está atado a una lista cerrada de
+  modelos. `LLM_PROVIDER` (en `.env`) elige el back-end sin tocar el pipeline; cualquier
+  modelo se integra implementando la interfaz `LLMProvider` (`backend/app/llm/provider.py`) y
+  registrándolo en `_PROVIDERS`. Por defecto: **Gemini 2.5 Flash**. Un valor desconocido
+  falla con la lista de valores válidos (no cae en otro proveedor). Cada llamada deja una
+  línea `llm_call ...` en el log (proveedor, modelo, operación, latencia, tokens, intento);
+  nunca se registra el contenido de prompts ni de respuestas.
+
+  | `LLM_PROVIDER` | Variables |
+  |---|---|
+  | `gemini` (por defecto) | `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-2.5-flash`, `GEMINI_BASE_URL` |
+  | `anthropic` (Claude) | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL=claude-opus-5-5` (SDK oficial) |
+  | `deepseek` | `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL=deepseek-chat`, `DEEPSEEK_BASE_URL` |
+  | `groq` | `GROQ_API_KEY`, `GROQ_MODEL=llama-3.3-70b-versatile` |
+  | `github` | `GITHUB_TOKEN` (PAT con permiso Models), `GITHUB_MODEL=openai/gpt-4o` |
+  | `openai_compat` | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_JSON_MODE=true\|false` |
+  | `local` | `LOCAL_LLM_BASE_URL` (por defecto `http://localhost:11434/v1`), `LOCAL_LLM_MODEL`, `LOCAL_LLM_API_KEY` (opcional), `LLM_JSON_MODE` |
+
+  Comunes a todos: `LLM_MAX_RETRIES`, `LLM_MAX_OUTPUT_TOKENS`.
+
+  **Modalidades de resguardo de la información** (el Ejército elige según la clasificación):
+
+  | Modalidad | Modelos / servicios | `LLM_PROVIDER` | ¿La información sale de la red del Ejército? |
+  |---|---|---|---|
+  | Modelo local en la red | Pesos abiertos (Llama, Mistral, Qwen, Gemma, gpt-oss) servidos con Ollama o vLLM | `local` | No |
+  | Nube privada o dedicada | Azure OpenAI, Amazon Bedrock, Google Vertex AI (por su endpoint compatible con OpenAI) o un gateway institucional | `openai_compat` | Solo hacia la nube dedicada |
+  | API pública del proveedor | GPT (`openai_compat` con `https://api.openai.com/v1`), Claude (`anthropic`), Gemini (`gemini`) | `gemini`, `anthropic`, `openai_compat` | Sí |
+
+  **Apuntar a un servidor local existente** (Ollama o vLLM; `docker-compose.yml` no lo levanta):
+
+  ```
+  LLM_PROVIDER=local
+  LOCAL_LLM_MODEL=<nombre del modelo, p.ej. el que muestra `ollama list`>
+  LOCAL_LLM_BASE_URL=http://host.docker.internal:11434/v1   # Ollama en la máquina anfitriona (Docker Desktop)
+  #   vLLM: http://<host>:8000/v1  ·  Linux: usar la IP del host en lugar de host.docker.internal
+  ```
+
+  Si el endpoint rechaza `response_format` (modo JSON), poner `LLM_JSON_MODE=false`: el JSON lo
+  garantizan el prompt y la reparación de JSON. Ajustar `LLM_MAX_OUTPUT_TOKENS` a la salida
+  máxima del modelo (con endpoints propios es también el techo; no se escala).
 - **Plantilla pixel-perfect (RF-008):** dos modos (`EXPORT_STYLE`):
   - `overlay` (por defecto): usa las **6 PNG** de `backend/app/templates/` como
     fondo exacto de cada página A4 y **sobrepone los datos** de la IA en las

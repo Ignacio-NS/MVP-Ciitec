@@ -18,8 +18,9 @@ alembic
 minio
 
 # --- IA / NLP ---
-openai              # LLM activo: Gemini (endpoint OpenAI-compatible); también GitHub Models (gpt-4o)
-groq                # LLM legado: Groq Llama 3.3 70B
+openai              # LLM activo: Gemini (endpoint OpenAI-compatible); también DeepSeek, GitHub Models, openai_compat y local (Ollama/vLLM)
+anthropic           # LLM Claude (LLM_PROVIDER=anthropic), SDK oficial; import perezoso
+groq                # LLM alternativo: Groq Llama 3.3 70B
 json-repair         # repara JSON truncado del LLM (briefing grande corta al tope de tokens)
 sentence-transformers
 
