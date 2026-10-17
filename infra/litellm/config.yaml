@@ -1,0 +1,52 @@
+# =====================================================================
+#  Gateway LiteLLM (opcional) — conecta el sistema con servicios que NO
+#  tienen API compatible con OpenAI: Amazon Bedrock nativo (incluido Claude),
+#  Vertex AI con cuenta de servicio, Cohere, IBM watsonx, Hugging Face, etc.
+#
+#  Levantar:   docker compose --profile gateway up -d litellm
+#  Usar:       Motor de IA → "Gateway LiteLLM" (o LLM_PROVIDER=litellm en el .env)
+#              y elegir uno de los `model_name` de abajo (aparecen en la lista).
+#
+#  Cada entrada: `model_name` = nombre que verá el sistema; `litellm_params.model`
+#  = "<proveedor>/<id del modelo en ese servicio>". Lista de proveedores:
+#  https://docs.litellm.ai/docs/providers
+#  Las credenciales se leen del entorno con  os.environ/NOMBRE_VARIABLE.
+# =====================================================================
+model_list:
+  # Modelo local de la red institucional a través del gateway (sirve de prueba).
+  - model_name: local-qwen
+    litellm_params:
+      model: ollama_chat/qwen3.8:27b
+      api_base: http://host.docker.internal:11434
+
+  # --- Ejemplos: descomentar y completar el id exacto que muestra cada consola ---
+  # Claude (u otro modelo) en Amazon Bedrock con su API nativa:
+  # - model_name: claude-bedrock
+  #   litellm_params:
+  #     model: bedrock/<id-del-modelo-en-bedrock>
+  #     aws_region_name: os.environ/AWS_REGION_NAME
+  #     aws_access_key_id: os.environ/AWS_ACCESS_KEY_ID
+  #     aws_secret_access_key: os.environ/AWS_SECRET_ACCESS_KEY
+  #
+  # Gemini en Vertex AI con cuenta de servicio (el gateway renueva el token solo):
+  # - model_name: gemini-vertex
+  #   litellm_params:
+  #     model: vertex_ai/gemini-3.8-flash
+  #     vertex_project: <proyecto-gcp>
+  #     vertex_location: us-central1
+  #     vertex_credentials: /run/secrets/gcp-cuenta-servicio.json
+  #
+  # Cohere:
+  # - model_name: cohere
+  #   litellm_params:
+  #     model: cohere/<modelo>
+  #     api_key: os.environ/COHERE_API_KEY
+
+litellm_settings:
+  # Descarta en silencio los parámetros que un servicio no acepta (p.ej. response_format),
+  # en vez de devolver error: así cualquier modelo detrás del gateway responde.
+  drop_params: true
+
+general_settings:
+  # El sistema se autentica con esta clave (LITELLM_MASTER_KEY en el .env).
+  master_key: os.environ/LITELLM_MASTER_KEY

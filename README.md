@@ -124,10 +124,25 @@ nativo para Claude. Qué modelo responde lo decide la **configuración efectiva*
 |---|---|---|
 | `local` | Red institucional (Ollama / vLLM) | `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LLM_CONTEXT_TOKENS` |
 | `openai_compat` | Nube privada (Azure, Bedrock, Vertex) o gateway | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` |
+| `litellm` | Gateway incluido → más de 100 servicios (Bedrock nativo, Vertex, Cohere…) | `LITELLM_MASTER_KEY`, `LITELLM_MODEL`, `infra/litellm/config.yaml` |
 | `gemini` (por defecto) | API pública de Google | `GEMINI_API_KEY`, `GEMINI_MODEL` |
 | `openai` | API pública de OpenAI | `OPENAI_API_KEY`, `OPENAI_MODEL` |
 | `anthropic` | API pública de Anthropic | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
 | `deepseek`, `mistral`, `groq`, `github` | API pública | `<PROVEEDOR>_API_KEY`, `<PROVEEDOR>_MODEL` |
+
+**Para que sirva cualquier modelo** (también los chicos o locales):
+
+- *Lista de modelos*: la interfaz consulta al servicio qué modelos tiene (`GET /models`) y
+  los ofrece en una lista. En Ollama son los ya descargados; uno nuevo se descarga desde
+  la misma pantalla (botón *Descargar en el servidor*, usa `/api/pull` de Ollama).
+- *Redacción por secciones* (`LLM_SINTESIS_MODO`): `auto` (por defecto) redacta el SITREP
+  de una vez y, si el modelo no alcanza o su ventana es < 32k, lo rehace en 6 llamadas
+  chicas; `secciones` lo hace siempre por partes; `completa`, siempre de una vez. Si una
+  sección secundaria falla queda vacía y la versión muestra un aviso para revisarla.
+- *Verificar modelo*: prueba el modelo con un parte ficticio (conexión, extracción,
+  resumen ejecutivo y respeto de cifras) y entrega un veredicto. No reemplaza al Robot QA.
+- *Gateway LiteLLM*: `docker compose --profile gateway up -d litellm` y declarar los
+  modelos en `infra/litellm/config.yaml`; en el sistema, proveedor *Gateway LiteLLM*.
 
 Bases ya creadas deben aplicar la migración:
 `docker compose exec -T db psql -U $DB_USER -d $DB_NAME < db/migrations/003_llm_configurable.sql`.
