@@ -169,7 +169,13 @@ export default function MotorIA() {
       setForm({ ...VACIO });
       await cargar();
     } catch (e) {
-      setError(mensajeError(e));
+      const msg = mensajeError(e);
+      if (msg.startsWith("La prueba de conexión falló")) {
+        // Se muestra como resultado de prueba para ofrecer "activar de todos modos".
+        setResultado({ ok: false, proveedor: form.proveedor, modelo: form.modelo || preset?.modelo, error: msg });
+      } else {
+        setError(msg);
+      }
     } finally {
       setOcupado("");
     }
