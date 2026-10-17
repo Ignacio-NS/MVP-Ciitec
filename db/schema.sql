@@ -249,6 +249,7 @@ CREATE TABLE llm_config (
     extra_params     JSONB,
     context_tokens   INT,
     timeout_s        REAL,
+    sintesis_modo    TEXT,
     vigente          BOOLEAN NOT NULL DEFAULT false,
     creado_por       UUID REFERENCES usuarios(id),
     creado_en        TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -111,6 +111,19 @@ def presets() -> dict[str, Preset]:
                 "(LiteLLM). Requiere LLM_BASE_URL y LLM_MODEL."
             ),
         ),
+        "litellm": Preset(
+            nombre="litellm", etiqueta="Gateway LiteLLM (más de 100 servicios)",
+            adaptador="openai", resguardo="ALTO",
+            base_url=s.litellm_base_url, modelo=s.litellm_model,
+            api_key=s.litellm_api_key or s.litellm_master_key,
+            requiere_api_key=False,
+            descripcion=(
+                "Gateway incluido en el docker-compose (perfil 'gateway'). Conecta servicios sin API "
+                "compatible con OpenAI: Amazon Bedrock nativo (incluido Claude), Vertex AI con "
+                "credenciales de servicio, Cohere, IBM watsonx, Hugging Face, etc. Los modelos se "
+                "declaran en infra/litellm/config.yaml. El resguardo depende del servicio de destino."
+            ),
+        ),
         "local": Preset(
             nombre="local", etiqueta="Modelo local (Ollama / vLLM)", adaptador="openai", resguardo="MAXIMO",
             base_url=s.local_llm_base_url, modelo=s.local_llm_model, api_key=s.local_llm_api_key,

@@ -39,9 +39,14 @@ from ..schemas.llm import (
     HojaCompletada,
 )
 from . import ajustes as ajustes_mod
+from . import secciones
 from .ajustes import Ajustes, ConfigIAError
 
 logger = logging.getLogger(__name__)
+
+
+# Con una ventana declarada menor que esto, el SITREP se redacta por secciones de entrada.
+VENTANA_MIN_COMPLETA = 32768
 
 
 class LLMError(RuntimeError):
@@ -324,12 +329,60 @@ class _ChatJSONProvider(LLMProvider):
         return [h.model_dump() for h in parsed.hechos]
 
     def sintetizar_briefing(self, hechos: list[dict[str, Any]], parametros: dict[str, Any]) -> dict[str, Any]:
+        """Redacta el SITREP de una vez o por secciones según `sintesis_modo`.
+
+        auto: si la ventana declarada es chica (< 32k) va directo por secciones; si no,
+        intenta de una vez y, si el modelo no lo logra (JSON cortado o inválido), lo
+        rehace por secciones. Así un modelo chico también entrega el SITREP."""
+        aj = getattr(self, "aj", None)
+        modo = getattr(aj, "sintesis_modo", "completa") or "completa"
+        if modo == "auto" and aj is not None and aj.context_tokens and aj.context_tokens < VENTANA_MIN_COMPLETA:
+            modo = "secciones"
+        if modo == "secciones":
+            return self.sintetizar_por_secciones(hechos, parametros)
+        try:
+            return self._sintetizar_completa(hechos, parametros)
+        except LLMError as e:
+            if modo != "auto":
+                raise
+            logger.warning(
+                "Síntesis completa falló con %s/%s (%s); se rehace por secciones", self.nombre, self.modelo, e
+            )
+            return self.sintetizar_por_secciones(hechos, parametros, respaldo=True)
+
+    def _sintetizar_completa(self, hechos: list[dict[str, Any]], parametros: dict[str, Any]) -> dict[str, Any]:
         payload = json.dumps({"hechos": hechos, "parametros": parametros}, ensure_ascii=False)
         data = self._chat_json(_SYNTH_SYS, payload, operacion="sintesis")
         try:
-            return BriefingOut.model_validate(data).model_dump()
+            out = BriefingOut.model_validate(data).model_dump()
         except ValidationError as e:
             raise LLMError(f"Síntesis con formato inválido: {e}")
+        out["generacion"] = {"modo": "completa", "avisos": []}
+        return out
+
+    def sintetizar_por_secciones(
+        self,
+        hechos: list[dict[str, Any]],
+        parametros: dict[str, Any],
+        *,
+        respaldo: bool = False,
+        secciones_a_usar: tuple | None = None,
+    ) -> dict[str, Any]:
+        try:
+            data, avisos = secciones.sintetizar(
+                self._chat_json, hechos, parametros,
+                secciones=secciones_a_usar or secciones.SECCIONES,
+            )
+        except LLMError:
+            raise
+        except Exception as e:  # sección obligatoria incompleta
+            raise LLMError(f"Síntesis por secciones falló en el resumen ejecutivo: {e}") from e
+        try:
+            out = BriefingOut.model_validate(data).model_dump()
+        except ValidationError as e:
+            raise LLMError(f"Síntesis por secciones con formato inválido: {e}")
+        out["generacion"] = {"modo": "secciones (respaldo)" if respaldo else "secciones", "avisos": avisos}
+        return out
 
     def detectar_contradicciones(self, hechos: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if len(hechos) < 2:
@@ -545,3 +598,152 @@ def probar_conexion(aj: Ajustes) -> dict[str, Any]:
             "proveedor": aj.proveedor,
             "modelo": aj.modelo,
         }
+
+
+# ---------------------------------------------------------------------------
+#  Catálogo de modelos que ofrece un servicio
+# ---------------------------------------------------------------------------
+def listar_modelos(aj: Ajustes) -> list[str]:
+    """Modelos que el servicio dice tener (GET /models), para elegirlos de una lista.
+
+    Funciona con OpenAI, Gemini, Mistral, Groq, DeepSeek, OpenRouter, Azure v1, vLLM,
+    Ollama (los modelos ya descargados), LiteLLM (los declarados en su config) y la
+    API de Anthropic. Si el servicio no publica su catálogo se lanza LLMError y la
+    interfaz deja escribir el nombre a mano."""
+    try:
+        if aj.adaptador == "anthropic":
+            from anthropic import Anthropic
+
+            cli = Anthropic(api_key=aj.api_key, base_url=aj.base_url or None, timeout=30, max_retries=0)
+            ids = [m.id for m in cli.models.list(limit=1000)]
+        else:
+            from openai import OpenAI
+
+            cli = OpenAI(base_url=aj.base_url, api_key=aj.api_key or "sin-clave", timeout=30, max_retries=0)
+            ids = [m.id for m in cli.models.list()]
+    except Exception as e:  # noqa: BLE001
+        raise LLMError(f"El servicio no entregó su lista de modelos: {str(e)[:300]}") from e
+    # Gemini antepone "models/" en su endpoint compatible; la API espera el id sin prefijo.
+    limpios = {i.removeprefix("models/") for i in ids if i}
+    return sorted(limpios, key=str.lower)
+
+
+# ---------------------------------------------------------------------------
+#  Verificación de un modelo con un caso real (sintético)
+# ---------------------------------------------------------------------------
+# Documento FICTICIO (no clasificado) con datos conocidos para comprobar que el
+# modelo extrae, redacta y respeta cifras. Las cifras esperadas están abajo.
+MUESTRA_PARTE = """PARTE OPERACIONAL DIARIO N° 999 — DOCUMENTO DE PRUEBA (DATOS FICTICIOS)
+Fecha: 14 de octubre de 2026, 08:00 horas. Unidad informante: Regimiento de Prueba N° 1.
+1. A las 03:40 horas un incendio forestal afectó el sector Cerro Alto, comuna de Ejemplo.
+   La Compañía de Ingenieros apoyó con 2 camiones aljibe; el incendio sigue EN CURSO y no hay heridos.
+2. A las 06:15 horas se cortó el puente Río Claro por crecida; la ruta queda interrumpida y se
+   habilitó un desvío por camino interior. Responsable: Batallón Logístico. Estado: ABIERTO.
+3. Se completó la evacuación preventiva de 35 familias del sector Las Vegas a las 07:30 horas.
+   Estado: CERRADO.
+PERSONAL: Oficiales (OF) 120, Suboficiales (SOF) 340, Soldados (SLC) 780. Total de efectivos: 1240.
+METEOROLOGÍA: lluvias intensas próximas 48 horas, viento norte de 60 km/h."""
+
+_TOTAL_ESPERADO = "1240"
+_PALABRAS_ESPERADAS = ("incendio", "puente", "evacu")
+
+
+def _paso(nombre: str, ok: bool | None, t0: float, detalle: str, **extra: Any) -> dict[str, Any]:
+    estado = "ok" if ok else ("advertencia" if ok is None else "falla")
+    return {"paso": nombre, "estado": estado, "latencia_ms": int((time.perf_counter() - t0) * 1000),
+            "detalle": detalle, **extra}
+
+
+def verificar_modelo(aj: Ajustes, al_avanzar: Any = None) -> dict[str, Any]:
+    """Prueba el modelo con un parte ficticio: conexión, extracción, redacción y cifras.
+
+    Veredicto:
+      COMPATIBLE                    los 4 pasos bien,
+      COMPATIBLE_CON_OBSERVACIONES  funciona, pero no respetó una cifra (revisar a mano),
+      NO_COMPATIBLE                 falló la conexión, la extracción o el resumen.
+    No reemplaza la certificación del Robot QA (campaña completa)."""
+    pasos: list[dict[str, Any]] = []
+    total = 4
+
+    def avance(i: int, texto: str) -> None:
+        if al_avanzar:
+            al_avanzar({"paso_actual": i, "total": total, "descripcion": texto, "pasos": pasos})
+
+    def cerrar(veredicto: str, resumen: str) -> dict[str, Any]:
+        return {"veredicto": veredicto, "resumen": resumen, "pasos": pasos,
+                "proveedor": aj.proveedor, "modelo": aj.modelo, "firma": aj.firma(),
+                "modo_sintesis_recomendado": (
+                    "secciones" if (aj.context_tokens and aj.context_tokens < VENTANA_MIN_COMPLETA)
+                    else aj.sintesis_modo)}
+
+    # 1) Conexión y JSON
+    avance(1, "Conexión y respuesta en JSON")
+    t0 = time.perf_counter()
+    r = probar_conexion(aj)
+    pasos.append(_paso("Conexión y respuesta en JSON", r["ok"], t0,
+                       "El servicio respondió JSON válido." if r["ok"] else r.get("error", "sin respuesta")))
+    if not r["ok"]:
+        return cerrar("NO_COMPATIBLE", "No se pudo conectar o el modelo no responde en JSON.")
+
+    p = crear_proveedor(aj)
+    p.max_retries = 2  # type: ignore[attr-defined]
+
+    # 2) Extracción de hechos
+    avance(2, "Extracción de hechos de un parte de prueba")
+    t0 = time.perf_counter()
+    try:
+        hechos = p.extraer_hechos(MUESTRA_PARTE)
+        texto = " ".join((h.get("evento", "") + " " + h.get("texto_origen", "")).lower() for h in hechos)
+        hallados = [w for w in _PALABRAS_ESPERADAS if w in texto]
+        con_cita = sum(1 for h in hechos if h.get("texto_origen"))
+        ok = len(hechos) >= 2 and len(hallados) >= 2
+        pasos.append(_paso(
+            "Extracción de hechos", ok, t0,
+            f"{len(hechos)} hechos extraídos ({con_cita} con cita textual); "
+            f"reconoció {len(hallados)} de 3 eventos del parte.",
+            hechos=len(hechos)))
+    except Exception as e:  # noqa: BLE001
+        hechos, ok = [], False
+        pasos.append(_paso("Extracción de hechos", False, t0, str(e)[:300]))
+    if not ok:
+        return cerrar("NO_COMPATIBLE", "El modelo no extrae bien los hechos de un parte operacional.")
+
+    hechos_payload = [{**h, "id": f"h{i}"} for i, h in enumerate(hechos)]
+    params = {"contexto_fuentes": f"[parte_prueba.txt]\n{MUESTRA_PARTE}"}
+    por_clave = {s.clave: s for s in secciones.SECCIONES}
+
+    # 3) Resumen ejecutivo (la sección obligatoria del SITREP)
+    avance(3, "Redacción del resumen ejecutivo")
+    t0 = time.perf_counter()
+    try:
+        out = p.sintetizar_por_secciones(hechos_payload, params, secciones_a_usar=(por_clave["ejecutivo"],))  # type: ignore[attr-defined]
+        bullets = [b for b in out.get("resumen_ejecutivo", []) if str(b).strip()]
+        ok = len(bullets) >= 3
+        pasos.append(_paso("Resumen ejecutivo", ok, t0, f"{len(bullets)} bullets redactados.",
+                           ejemplo=bullets[0][:200] if bullets else ""))
+    except Exception as e:  # noqa: BLE001
+        ok = False
+        pasos.append(_paso("Resumen ejecutivo", False, t0, str(e)[:300]))
+    if not ok:
+        return cerrar("NO_COMPATIBLE", "El modelo no logra redactar el resumen ejecutivo del SITREP.")
+
+    # 4) Una sección con cifras: ¿respeta los números del documento?
+    avance(4, "Sección PERSONAL: respeto de cifras")
+    t0 = time.perf_counter()
+    try:
+        out = p.sintetizar_por_secciones(hechos_payload, params, secciones_a_usar=(por_clave["personal"],))  # type: ignore[attr-defined]
+        total_pf = str(((out.get("personal") or {}).get("parte_fuerza_institucional") or {}).get("total", ""))
+        digitos = "".join(ch for ch in total_pf if ch.isdigit())
+        ok4 = digitos == _TOTAL_ESPERADO
+        pasos.append(_paso(
+            "Cifras de la sección PERSONAL", True if ok4 else None, t0,
+            "Copió el total de efectivos correcto (1240)." if ok4
+            else f"Total de efectivos esperado 1240, el modelo entregó {total_pf or 'vacío'!r}."))
+    except Exception as e:  # noqa: BLE001
+        ok4 = False
+        pasos.append(_paso("Cifras de la sección PERSONAL", None, t0, str(e)[:300]))
+
+    if ok4:
+        return cerrar("COMPATIBLE", "El modelo puede generar el SITREP. Certificar con el Robot QA antes de producción.")
+    return cerrar("COMPATIBLE_CON_OBSERVACIONES",
+                  "El modelo genera el SITREP, pero no respetó una cifra: revisar las tablas antes de aprobar.")

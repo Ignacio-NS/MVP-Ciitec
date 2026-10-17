@@ -204,6 +204,7 @@ class LLMConfig(Base):
     extra_params = Column(JSONB)
     context_tokens = Column(Integer)
     timeout_s = Column(Float)
+    sintesis_modo = Column(Text)
     vigente = Column(Boolean, nullable=False, default=False)
     creado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
     creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

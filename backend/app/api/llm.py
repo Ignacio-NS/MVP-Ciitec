@@ -27,7 +27,8 @@ from ..db import get_db
 from ..llm import ajustes as ajustes_mod
 from ..llm import catalogo
 from ..llm.ajustes import ConfigIAError
-from ..llm.provider import probar_conexion
+from ..llm import ollama
+from ..llm.provider import LLMError, listar_modelos, probar_conexion
 from ..models import LLMConfig, Usuario
 from ..schemas.api import LLMConfigIn
 
@@ -73,6 +74,7 @@ def _fila_desde(body: LLMConfigIn, api_key: str | None) -> SimpleNamespace:
         extra_params=body.extra_params if body.extra_params else None,
         context_tokens=body.context_tokens or None,
         timeout_s=body.timeout_s or None,
+        sintesis_modo=(body.sintesis_modo or "").strip().lower() or None,
     )
 
 
@@ -219,6 +221,7 @@ def activar(body: LLMConfigIn, user: CurrentUser = Depends(_editar), db: Session
         proveedor=fila.proveedor, modelo=fila.modelo, base_url=fila.base_url, api_key=api_key,
         json_mode=fila.json_mode, temperature=fila.temperature, token_param=fila.token_param,
         extra_params=fila.extra_params, context_tokens=fila.context_tokens, timeout_s=fila.timeout_s,
+        sintesis_modo=fila.sintesis_modo,
         vigente=True, creado_por=user.id,
     )
     db.add(nueva)
@@ -262,6 +265,77 @@ def volver_a_env(user: CurrentUser = Depends(_editar), db: Session = Depends(get
     db.commit()
     ajustes_mod.invalidar_cache()
     return {"efectiva": env.publico()}
+
+
+# ---------------------------------------------------------------------------
+#  Ver los modelos del servicio, verificarlos y (Ollama) descargarlos
+# ---------------------------------------------------------------------------
+def _ajustes_de(body: LLMConfigIn | None, db: Session):
+    """Ajustes de la petición (o los efectivos si no hay cuerpo)."""
+    if body is None:
+        try:
+            return ajustes_mod.resolver()
+        except ConfigIAError as e:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    return _validar(body, _clave_para(db, body))[1]
+
+
+@router.post("/modelos")
+def modelos(body: LLMConfigIn, user: CurrentUser = Depends(_editar), db: Session = Depends(get_db)):
+    """Lista los modelos que ofrece el servicio elegido (para elegir sin escribir el nombre).
+
+    En Ollama son los ya descargados; para usar otro se puede descargar con /llm/descargar."""
+    # Para listar no hace falta haber elegido modelo todavía.
+    consulta = body.model_copy(update={"modelo": body.modelo or "-"})
+    aj = _ajustes_de(consulta, db)
+    es_ollama = aj.proveedor == "local" and ollama.version(aj.base_url) is not None
+    try:
+        lista = listar_modelos(aj)
+    except LLMError as e:
+        return {"modelos": [], "error": str(e), "ollama": es_ollama}
+    return {"modelos": lista, "ollama": es_ollama}
+
+
+def _lanzar(tarea, body: LLMConfigIn | None, user: CurrentUser, db: Session) -> dict[str, str]:
+    aj = _ajustes_de(body, db)
+    r = tarea.delay(ajustes_mod.empaquetar(aj), str(user.id))
+    return {"tarea": r.id, "modelo": aj.firma()}
+
+
+@router.post("/verificar")
+def verificar(body: LLMConfigIn | None = None, user: CurrentUser = Depends(_editar), db: Session = Depends(get_db)):
+    """Verifica en segundo plano si el modelo sirve para generar el SITREP (ver /llm/tareas/{id})."""
+    from ..worker import llm_verificar
+
+    return _lanzar(llm_verificar, body, user, db)
+
+
+@router.post("/descargar")
+def descargar(body: LLMConfigIn, user: CurrentUser = Depends(_editar), db: Session = Depends(get_db)):
+    """Pide al servidor Ollama de la red institucional que descargue un modelo."""
+    _exigir_ui_habilitada()
+    if (body.proveedor or "").strip().lower() != "local":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se pueden descargar modelos en el servidor local (Ollama).")
+    if not (body.modelo or "").strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indique el modelo a descargar (p.ej. qwen3.8:27b).")
+    from ..worker import llm_descargar
+
+    return _lanzar(llm_descargar, body, user, db)
+
+
+@router.get("/tareas/{tarea_id}")
+def tarea(tarea_id: str, user: CurrentUser = Depends(_editar)):
+    """Estado de una verificación o descarga: PENDIENTE | EN_CURSO | OK | ERROR."""
+    from ..worker import celery_app
+
+    r = celery_app.AsyncResult(tarea_id)
+    if r.state == "SUCCESS":
+        return {"estado": "OK", "resultado": r.result}
+    if r.state == "FAILURE":
+        return {"estado": "ERROR", "error": str(r.result)[:500]}
+    if r.state == "PROGRESS":
+        return {"estado": "EN_CURSO", "progreso": r.info}
+    return {"estado": "EN_CURSO" if r.state == "STARTED" else "PENDIENTE"}
 
 
 # ---------------------------------------------------------------------------

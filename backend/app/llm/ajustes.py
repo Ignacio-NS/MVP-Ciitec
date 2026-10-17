@@ -29,6 +29,9 @@ from . import catalogo
 logger = logging.getLogger(__name__)
 
 
+MODOS_SINTESIS = ("auto", "completa", "secciones")
+
+
 class ConfigIAError(ValueError):
     """Configuración del motor de IA inválida (proveedor desconocido, falta URL, etc.)."""
 
@@ -52,6 +55,7 @@ class Ajustes:
     context_tokens: int
     max_retries: int
     origen: str  # "env" | "ui"
+    sintesis_modo: str = "auto"  # auto | completa | secciones
 
     def publico(self) -> dict[str, Any]:
         """Vista segura para la API/la interfaz: NUNCA incluye la clave."""
@@ -151,6 +155,7 @@ def construir(proveedor: str, cambios: dict[str, Any] | None = None, *, origen: 
         context_tokens=ctx,
         max_retries=settings.llm_max_retries,
         origen=origen,
+        sintesis_modo=str(c.get("sintesis_modo") or settings.llm_sintesis_modo or "auto").strip().lower(),
     )
     validar(aj, requiere_clave=p.requiere_api_key)
     return aj
@@ -167,6 +172,8 @@ def validar(aj: Ajustes, *, requiere_clave: bool = True) -> None:
         raise ConfigIAError(f"URL inválida: {aj.base_url!r} (debe empezar con http:// o https://)")
     if requiere_clave and not aj.api_key:
         raise ConfigIAError(f"Falta la API key del proveedor '{aj.proveedor}'")
+    if aj.sintesis_modo not in MODOS_SINTESIS:
+        raise ConfigIAError(f"Modo de síntesis inválido: {aj.sintesis_modo!r} (auto, completa o secciones)")
     if not (0 <= aj.timeout_s <= 3600):
         raise ConfigIAError("El timeout debe estar entre 0 y 3600 segundos")
 
@@ -202,6 +209,7 @@ def desde_fila(fila: Any) -> Ajustes:
         "extra_params": fila.extra_params,
         "context_tokens": fila.context_tokens,
         "timeout_s": fila.timeout_s,
+        "sintesis_modo": getattr(fila, "sintesis_modo", None),
     }
     if fila.json_mode is not None:
         cambios["json_mode"] = fila.json_mode
@@ -264,3 +272,22 @@ def invalidar_cache() -> None:
     global _cache
     with _lock:
         _cache = None
+
+
+# ---------------------------------------------------------------------------
+#  Paso de ajustes a una tarea en segundo plano (verificar / descargar)
+# ---------------------------------------------------------------------------
+def empaquetar(aj: Ajustes) -> str:
+    """Serializa los ajustes CIFRADOS (AES-256-GCM) para la cola de Celery.
+
+    La cola y el backend de resultados viven en Redis: la API key nunca debe
+    quedar ahí en claro."""
+    from ..crypto import encrypt_str
+
+    return encrypt_str(json.dumps(asdict(aj)))
+
+
+def desempaquetar(paquete: str) -> Ajustes:
+    from ..crypto import decrypt_str
+
+    return Ajustes(**json.loads(decrypt_str(paquete)))

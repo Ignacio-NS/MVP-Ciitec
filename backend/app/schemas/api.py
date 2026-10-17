@@ -61,5 +61,6 @@ class LLMConfigIn(BaseModel):
     extra_params: dict | None = None
     context_tokens: int | None = None
     timeout_s: float | None = None
+    sintesis_modo: str | None = None   # auto | completa | secciones
     probar: bool = True     # probar la conexión antes de activar
     forzar: bool = False    # activar aunque la prueba falle

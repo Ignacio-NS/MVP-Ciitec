@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     llm_timeout_s: float = 300.0        # timeout por llamada (los modelos locales en CPU son lentos)
     llm_context_tokens: int = 0         # ventana de contexto del modelo; 0 = usar topes SYNTH_* fijos
     llm_max_output_techo: int = 0       # techo al que se escala la salida si se trunca; 0 = preset
+    # Cómo se redacta el SITREP:
+    #   auto      = de una vez; si el modelo no puede (o su ventana es < 32k), por secciones
+    #   completa  = siempre de una vez (un JSON grande; modelos grandes)
+    #   secciones = siempre por partes (cualquier modelo, incluidos los chicos/locales)
+    llm_sintesis_modo: str = "auto"
     # Configuración desde la interfaz
     llm_config_ui: bool = True          # false = la interfaz solo muestra, no permite cambiar
     llm_proveedores_permitidos: str = ""  # lista separada por comas; vacío = todos
@@ -79,6 +84,12 @@ class Settings(BaseSettings):
     # Mistral — LLM_PROVIDER=mistral
     mistral_api_key: str = ""
     mistral_model: str = ""
+    # Gateway LiteLLM incluido (docker compose --profile gateway) — LLM_PROVIDER=litellm.
+    # Traduce a más de 100 servicios (Bedrock nativo, Vertex, Cohere, watsonx, etc.).
+    litellm_base_url: str = "http://litellm:4000/v1"
+    litellm_api_key: str = ""           # vacío = se usa LITELLM_MASTER_KEY
+    litellm_master_key: str = ""        # clave maestra del gateway (también la lee el contenedor)
+    litellm_model: str = ""
     llm_max_retries: int = 4
     # Tope de tokens de SALIDA por request. deepseek-chat (= deepseek-v4-flash,
     # no-thinking) admite hasta ~64K+ de salida; el briefing institucional es JSON

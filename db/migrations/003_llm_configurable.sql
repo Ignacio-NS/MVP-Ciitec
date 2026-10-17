@@ -25,9 +25,12 @@ CREATE TABLE IF NOT EXISTS llm_config (
     extra_params     JSONB,
     context_tokens   INT,
     timeout_s        REAL,
+    sintesis_modo    TEXT,
     vigente          BOOLEAN NOT NULL DEFAULT false,
     creado_por       UUID REFERENCES usuarios(id),
     creado_en        TIMESTAMPTZ NOT NULL DEFAULT now(),
     desactivado_en   TIMESTAMPTZ
 );
+-- (para quien aplicó una versión anterior de esta migración)
+ALTER TABLE llm_config ADD COLUMN IF NOT EXISTS sintesis_modo TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_llm_config_vigente ON llm_config (vigente) WHERE vigente;
