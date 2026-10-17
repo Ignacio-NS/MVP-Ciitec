@@ -42,11 +42,43 @@ class Settings(BaseSettings):
     audit_log_reads: bool = True
     audit_retention_years: int = 5
 
-    # LLM — proveedor activo (por defecto Gemini). Valores:
-    #   gemini | anthropic | deepseek | groq | github   (API pública del proveedor)
-    #   openai_compat                                    (nube privada / gateway, ver LLM_*)
-    #   local                                            (Ollama / vLLM en la red, ver LOCAL_LLM_*)
+    # ------------------------------------------------------------------
+    # LLM — motor de IA intercambiable (ver llm/catalogo.py y README).
+    # Valores de LLM_PROVIDER: gemini | openai | anthropic | deepseek | mistral |
+    # groq | github | openai_compat | local. Un valor desconocido DETIENE la
+    # generación (no se cae en silencio a otro proveedor).
+    # Se puede sobreescribir en caliente desde la interfaz (Administrador del
+    # Sistema → "Motor de IA"); este .env queda como respaldo.
+    # ------------------------------------------------------------------
     llm_provider: str = "gemini"
+    # Variables GENÉRICAS: si se definen, mandan sobre las del preset del proveedor.
+    llm_model: str = ""                 # p.ej. gpt-6-luna, claude-sonnet-5-5, qwen3.8:27b
+    llm_base_url: str = ""              # endpoint OpenAI-compatible (obligatorio en openai_compat)
+    llm_api_key: str = ""
+    llm_json_mode: bool = True          # response_format=json_object (false si el servicio no lo acepta)
+    llm_temperature: str = ""           # vacío = default del preset; "none" = no enviar el parámetro
+    llm_token_param: str = ""           # max_tokens | max_completion_tokens (vacío = preset)
+    llm_extra_params: str = ""          # JSON que se agrega al body (p.ej. {"reasoning_effort":"none"})
+    llm_timeout_s: float = 300.0        # timeout por llamada (los modelos locales en CPU son lentos)
+    llm_context_tokens: int = 0         # ventana de contexto del modelo; 0 = usar topes SYNTH_* fijos
+    llm_max_output_techo: int = 0       # techo al que se escala la salida si se trunca; 0 = preset
+    # Configuración desde la interfaz
+    llm_config_ui: bool = True          # false = la interfaz solo muestra, no permite cambiar
+    llm_proveedores_permitidos: str = ""  # lista separada por comas; vacío = todos
+    llm_config_cache_s: float = 15.0    # cada cuánto el worker relee la configuración de la BD
+    # Modelo local (Ollama / vLLM) — LLM_PROVIDER=local
+    local_llm_base_url: str = "http://host.docker.internal:11434/v1"
+    local_llm_model: str = "gpt-oss:20b"
+    local_llm_api_key: str = ""
+    # Anthropic (Claude) — adaptador nativo, LLM_PROVIDER=anthropic
+    anthropic_api_key: str = ""
+    anthropic_model: str = ""
+    # OpenAI — LLM_PROVIDER=openai
+    openai_api_key: str = ""
+    openai_model: str = ""
+    # Mistral — LLM_PROVIDER=mistral
+    mistral_api_key: str = ""
+    mistral_model: str = ""
     llm_max_retries: int = 4
     # Tope de tokens de SALIDA por request. deepseek-chat (= deepseek-v4-flash,
     # no-thinking) admite hasta ~64K+ de salida; el briefing institucional es JSON
@@ -58,36 +90,19 @@ class Settings(BaseSettings):
     synth_max_hechos: int = 150              # nº máx. de hechos enviados a síntesis
     synth_max_contexto_chars: int = 40000    # tope total del texto crudo (contexto_fuentes); DeepSeek 64k lo permite
     synth_max_chars_por_fuente: int = 4000   # tope por archivo, para que TODAS las fuentes aporten cifras
-    # Gemini (Google) — endpoint OpenAI-compatible (proveedor activo por defecto)
-    gemini_api_key: str = ""
-    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    gemini_model: str = "gemini-2.5-flash"
-    # Anthropic (Claude) — SDK oficial
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-opus-5-5"
-    # DeepSeek — endpoint OpenAI-compatible
+    # DeepSeek — endpoint OpenAI-compatible (proveedor activo, pagado)
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
-    # Groq
+    # Gemini (Google) — endpoint OpenAI-compatible (legado)
+    gemini_api_key: str = ""
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    gemini_model: str = "gemini-2.5-flash"
+    # Groq (legado)
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
     groq_max_retries: int = 3
-    # Genérico OpenAI-compatible (nube privada o dedicada: OpenAI, Azure OpenAI, Vertex AI,
-    # Bedrock por su endpoint compatible, gateway institucional). Todo por entorno.
-    llm_base_url: str = ""
-    llm_api_key: str = ""
-    llm_model: str = ""
-    # False si el endpoint rechaza response_format={"type": "json_object"}; aplica a
-    # openai_compat y local. Sin él el JSON lo garantiza el prompt + la reparación de JSON.
-    llm_json_mode: bool = True
-    # Modelo local on-premise (pesos abiertos) servido con Ollama o vLLM (API estilo OpenAI).
-    # No requiere internet ni clave. Desde Docker, un servidor en el host se alcanza en
-    # http://host.docker.internal:11434/v1
-    local_llm_base_url: str = "http://localhost:11434/v1"
-    local_llm_model: str = ""
-    local_llm_api_key: str = ""
-    # GitHub Models (OpenAI-compatible) — gpt-4o
+    # GitHub Models (OpenAI-compatible) — gpt-4o (legado)
     github_token: str = ""
     github_base_url: str = "https://models.github.ai/inference"
     github_model: str = "openai/gpt-4o"

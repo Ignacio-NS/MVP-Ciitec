@@ -3,7 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.llm.provider import LLMError, _OpenAICompatProvider
+from app.llm.ajustes import construir
+from app.llm.provider import LLMError, crear_proveedor
 
 COMPLETO = '{"resumen_ejecutivo": ["a"], "inteligencia": {"analisis_meteo": "x"}}'
 TRUNCADO = '{"resumen_ejecutivo": ["a"], "personal": {"slc": {"clase_2006": "21'  # cortado a medias
@@ -30,8 +31,9 @@ class _ClienteFalso:
 
 
 def _provider(cliente, techo=4000):
-    p = _OpenAICompatProvider()
-    p.client, p.model, p.max_retries = cliente, "m", 3
+    aj = construir("openai_compat", {"base_url": "http://llm.local/v1", "modelo": "m"}, origen="env")
+    p = crear_proveedor(aj, cliente)
+    p.max_retries = 3
     p.max_output_tokens, p.max_output_techo = 1000, techo
     return p
 

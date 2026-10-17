@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from .. import embeddings
+from ..llm import presupuesto
 from ..llm.provider import LLMProvider
 from . import normalizacion
 
@@ -32,9 +33,32 @@ def _a_datetime(iso: str | None) -> datetime | None:
         return None
 
 
+def _extraer_crudos(texto: str, provider: LLMProvider) -> list[dict[str, Any]]:
+    """Llama al LLM; si el documento no cabe en la ventana del modelo, lo parte.
+
+    Con LLM_CONTEXT_TOKENS declarado (típico de modelos locales) un documento
+    largo se procesa por fragmentos con solape; los hechos repetidos por el
+    solape (mismo evento y misma cita textual) se descartan."""
+    aj = getattr(provider, "aj", None)
+    max_chars = presupuesto.max_chars_extraccion(aj) if aj is not None else 0
+    trozos = presupuesto.fragmentar(texto, max_chars)
+    if len(trozos) == 1:
+        return provider.extraer_hechos(texto)
+    vistos: set[tuple[str, str]] = set()
+    crudos: list[dict[str, Any]] = []
+    for trozo in trozos:
+        for h in provider.extraer_hechos(trozo):
+            clave = (str(h.get("evento", "")).strip().lower(), str(h.get("texto_origen", "")).strip().lower())
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+            crudos.append(h)
+    return crudos
+
+
 def extraer(texto: str, provider: LLMProvider) -> list[dict[str, Any]]:
     """Extrae hechos del texto y los deja listos para persistir."""
-    crudos = provider.extraer_hechos(texto)
+    crudos = _extraer_crudos(texto, provider)
     resultado: list[dict[str, Any]] = []
     for h in crudos:
         normalizado = normalizacion.normalizar_hecho(h)
