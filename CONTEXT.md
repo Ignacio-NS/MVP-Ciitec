@@ -33,8 +33,9 @@ Aplicación web interna, despliegue on-premise, monorepo, arquitectura en capas:
 
 **Stack:** React+TS · FastAPI · Celery+Redis · Nginx · LLM detrás de la
 interfaz pluggable `LLMProvider` (por defecto Gemini 2.5 Flash; también Claude,
-modelo local con Ollama/vLLM y nube privada por endpoint OpenAI-compatible; se
-elige solo con `LLM_PROVIDER`, ver README) · `sentence-transformers` para embeddings (local) · PostgreSQL +
+modelo local con Ollama/vLLM, nube privada por endpoint OpenAI-compatible y más de 100
+servicios vía el gateway LiteLLM; se elige con `LLM_PROVIDER` o desde la pantalla
+*Motor de IA*, ver README) · `sentence-transformers` para embeddings (local) · PostgreSQL +
 pgvector · MinIO.
 
 **Flujo:** Carga → Encola → Procesa → Valida → Entrega.

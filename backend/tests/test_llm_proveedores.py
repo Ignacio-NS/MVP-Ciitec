@@ -47,16 +47,28 @@ class _AnthropicFalso:
     def __init__(self, respuestas):
         self.respuestas = list(respuestas)
         self.llamadas: list[dict] = []
-        self.messages = SimpleNamespace(create=self._create)
+        self.messages = SimpleNamespace(stream=self._stream)
 
-    def _create(self, **kw):
+    def _stream(self, **kw):
+        """Imita `client.messages.stream(...)` (context manager con get_final_message)."""
         self.llamadas.append(kw)
-        texto, stop = self.respuestas.pop(0)
-        return SimpleNamespace(
+        resp = self.respuestas.pop(0)
+        if isinstance(resp, Exception):
+            raise resp
+        texto, stop = resp
+        final = SimpleNamespace(
             content=[SimpleNamespace(type="text", text=texto)],
             stop_reason=stop,
             usage=SimpleNamespace(input_tokens=10, output_tokens=5),
         )
+
+        class _Ctx:
+            def __enter__(self_):
+                return SimpleNamespace(get_final_message=lambda: final)
+
+            def __exit__(self_, *a):
+                return False
+        return _Ctx()
 
 
 @pytest.fixture
@@ -339,3 +351,47 @@ def test_probar_conexion_reporta_error_sin_exponer_clave(monkeypatch):
     monkeypatch.setattr("app.llm.provider.crear_proveedor", lambda a, client=None: OpenAICompatProvider(a, _Roto()))
     r = probar_conexion(aj)
     assert r["ok"] is False and "401" in r["error"] and "sk-super-secreta" not in str(r)
+
+
+# ---------------------------------------------------------------------------
+#  Integrado desde el trabajo del equipo (a06f525): Claude por streaming, rechazo
+#  y claves inválidas sin reintentos, registro de uso sin contenido.
+# ---------------------------------------------------------------------------
+def _claude(respuestas):
+    aj = construir("anthropic", {"api_key": "sk-ant-prueba-1234"}, origen="env")
+    cli = _AnthropicFalso(respuestas)
+    return crear_proveedor(aj, cli), cli
+
+
+def test_anthropic_rechazo_no_se_reintenta(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    p, cli = _claude([("", "refusal"), ('{"hechos": []}', "end_turn")])
+    with pytest.raises(LLMError, match="rechazó"):
+        p.extraer_hechos("doc")
+    assert len(cli.llamadas) == 1
+
+
+def test_clave_invalida_falla_de_inmediato(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    class AuthenticationError(Exception):
+        pass
+    p, cli = _claude([AuthenticationError("401 invalid x-api-key"), ('{"hechos": []}', "end_turn")])
+    with pytest.raises(LLMError, match="no recuperable"):
+        p.extraer_hechos("doc")
+    assert len(cli.llamadas) == 1
+
+
+def test_registro_de_uso_con_metadatos_y_sin_contenido(caplog):
+    import logging
+
+    cli = _OpenAIFalso([('{"hechos": [{"evento": "SECRETO-EVENTO", "texto_origen": "x"}]}', "stop")])
+    p = crear_proveedor(_compat(), cli)
+    with caplog.at_level(logging.INFO, logger="app.llm.provider"):
+        p.extraer_hechos("DOCUMENTO-CLASIFICADO")
+    lineas = [r.getMessage() for r in caplog.records if "llm_call" in r.getMessage()]
+    assert len(lineas) == 1
+    assert "provider=openai_compat model=m op=extraccion intento=1/" in lineas[0]
+    assert "tokens_in=10 tokens_out=5 resultado=ok" in lineas[0]
+    texto = " ".join(r.getMessage() for r in caplog.records)
+    assert "DOCUMENTO-CLASIFICADO" not in texto and "SECRETO-EVENTO" not in texto

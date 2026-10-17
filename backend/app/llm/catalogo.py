@@ -72,7 +72,7 @@ def presets() -> dict[str, Preset]:
         ),
         "anthropic": Preset(
             nombre="anthropic", etiqueta="Anthropic (Claude)", adaptador="anthropic", resguardo="BASICO",
-            base_url="https://api.anthropic.com", modelo=s.anthropic_model or "claude-sonnet-5-5",
+            base_url="https://api.anthropic.com", modelo=s.anthropic_model or "claude-opus-5-5",
             api_key=s.anthropic_api_key,
             # Claude 4.7+ responde 400 a temperature < 1: no se envía.
             temperature=None, json_mode=False,

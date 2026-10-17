@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     local_llm_api_key: str = ""
     # Anthropic (Claude) — adaptador nativo, LLM_PROVIDER=anthropic
     anthropic_api_key: str = ""
-    anthropic_model: str = ""
+    anthropic_model: str = "claude-opus-5-5"
     # OpenAI — LLM_PROVIDER=openai
     openai_api_key: str = ""
     openai_model: str = ""

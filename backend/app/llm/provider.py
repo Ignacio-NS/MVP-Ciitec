@@ -261,6 +261,25 @@ class _ChatJSONProvider(LLMProvider):
     def _completar(self, system: str, user: str, max_tokens: int) -> Respuesta:
         """Una llamada al servicio. Única pieza que cambia entre adaptadores."""
 
+    # Errores donde reintentar no sirve (clave inválida, sin permiso, modelo inexistente,
+    # petición rechazada). Mismos nombres en los SDK de OpenAI y de Anthropic.
+    _ERRORES_DEFINITIVOS = ("AuthenticationError", "PermissionDeniedError", "NotFoundError", "BadRequestError")
+
+    def _error_definitivo(self, e: Exception) -> bool:
+        return type(e).__name__ in self._ERRORES_DEFINITIVOS
+
+    def _log_uso(self, operacion: str, intento: int, latencia: float, resultado: str,
+                 r: Respuesta | None, falla: Exception | None) -> None:
+        """Una línea por llamada, SOLO metadatos: nunca el contenido de prompts ni respuestas
+        (los documentos pueden ser clasificados). De una excepción se registra solo su tipo."""
+        logger.info(
+            "llm_call provider=%s model=%s op=%s intento=%d/%d latencia_s=%.2f "
+            "tokens_in=%s tokens_out=%s resultado=%s%s",
+            self.nombre, self.modelo, operacion, intento, self.max_retries, latencia,
+            r.tokens_entrada if r else None, r.tokens_salida if r else None, resultado,
+            f" error={type(falla).__name__}" if falla else "",
+        )
+
     def _chat_json(self, system: str, user: str, *, operacion: str = "?") -> dict[str, Any]:
         """Pide JSON al modelo y reintenta con backoff.
 
@@ -272,27 +291,24 @@ class _ChatJSONProvider(LLMProvider):
         """
         last_err: Exception | None = None
         max_tokens = self.max_output_tokens
-        for intento in range(self.max_retries):
+        for intento in range(1, self.max_retries + 1):
             t0 = time.perf_counter()
+            r: Respuesta | None = None
+            resultado, falla, latencia = "error", None, None
             try:
                 r = self._completar(system, user, max_tokens)
-                logger.info(
-                    "llm_call proveedor=%s modelo=%s operacion=%s intento=%d latencia_ms=%d "
-                    "tokens_entrada=%s tokens_salida=%s truncado=%s",
-                    self.nombre, self.modelo, operacion, intento + 1,
-                    int((time.perf_counter() - t0) * 1000), r.tokens_entrada, r.tokens_salida, r.truncado,
-                )
+                latencia = time.perf_counter() - t0
                 raw = _extraer_json(r.texto)
                 try:
                     data = json.loads(raw)  # JSON completo y válido (aunque roce el tope)
                     if not isinstance(data, dict):
                         raise json.JSONDecodeError("se esperaba un objeto JSON", raw, 0)
-                    return data
                 except json.JSONDecodeError as e:
                     if r.truncado:
+                        resultado = "truncado"
                         logger.warning(
-                            "Salida LLM truncada (proveedor=%s modelo=%s max_tokens=%s)",
-                            self.nombre, self.modelo, max_tokens,
+                            "Salida LLM truncada (provider=%s model=%s max_tokens=%s tokens_out=%s)",
+                            self.nombre, self.modelo, max_tokens, r.tokens_salida,
                         )
                         if max_tokens < self.max_output_techo:
                             max_tokens = min(max_tokens * 2, self.max_output_techo)
@@ -304,19 +320,26 @@ class _ChatJSONProvider(LLMProvider):
                             "Sube LLM_MAX_OUTPUT_TOKENS o reduce el alcance (menos fuentes)."
                         ) from e
                     reparado = _try_repair_json(raw)
-                    if reparado is not None:
-                        return reparado
-                    raise
-            except LLMError:
-                raise  # error definitivo (truncación irreparable): no reintentar
+                    if reparado is None:
+                        resultado = "json_invalido"
+                        raise
+                    resultado = "ok_reparado"
+                    return reparado
+                resultado = "ok"
+                return data
+            except LLMError as e:
+                falla = e
+                raise  # error definitivo (truncación irreparable, rechazo): no reintentar
             except Exception as e:  # red, timeout, JSON inválido transitorio, etc.
-                last_err = e
-                logger.warning(
-                    "llm_call_error proveedor=%s modelo=%s operacion=%s intento=%d error=%s",
-                    self.nombre, self.modelo, operacion, intento + 1, type(e).__name__,
-                )
-                if intento < self.max_retries - 1:
-                    time.sleep(2 ** intento)  # 1s, 2s, 4s...
+                falla = last_err = e
+                if self._error_definitivo(e):
+                    raise LLMError(f"Error no recuperable de {self.nombre}/{self.modelo}: {e}") from e
+                if intento < self.max_retries:
+                    time.sleep(2 ** (intento - 1))  # 1s, 2s, 4s...
+            finally:
+                self._log_uso(operacion, intento,
+                              time.perf_counter() - t0 if latencia is None else latencia,
+                              resultado, r, falla)
         raise LLMError(f"LLM ({self.nombre}/{self.modelo}) falló tras {self.max_retries} intentos: {last_err}")
 
     # ---- Las cuatro operaciones del sistema ----
@@ -531,7 +554,11 @@ class AnthropicProvider(_ChatJSONProvider):
         return kw
 
     def _completar(self, system: str, user: str, max_tokens: int) -> Respuesta:
-        resp = self.client.messages.create(**self._kwargs(system, user, max_tokens))
+        # Streaming: con max_tokens alto el SDK lo exige para evitar cortes HTTP.
+        with self.client.messages.stream(**self._kwargs(system, user, max_tokens)) as stream:
+            resp = stream.get_final_message()
+        if resp.stop_reason == "refusal":
+            raise LLMError("Claude rechazó la solicitud (stop_reason=refusal); no se reintenta.")
         texto = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
         usage = getattr(resp, "usage", None)
         return Respuesta(
