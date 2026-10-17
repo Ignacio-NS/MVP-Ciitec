@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, mensajeError } from "../api";
 import { useAuth } from "../auth";
 import { Icon } from "../components/icons";
@@ -41,7 +41,18 @@ type Efectiva = {
   extra_params: Record<string, unknown>;
   context_tokens: number;
   timeout_s: number;
+  sintesis_modo: string;
 };
+
+const MODO_SINTESIS: Record<string, string> = {
+  auto: "Automática",
+  completa: "De una vez",
+  secciones: "Por secciones",
+};
+
+type Tarea = { id: string; estado: "PENDIENTE" | "EN_CURSO" | "OK" | "ERROR"; progreso?: any; resultado?: any; error?: string };
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const RESGUARDO: Record<string, { txt: string; cls: string; detalle: string }> = {
   MAXIMO: {
@@ -77,6 +88,7 @@ const VACIO = {
   context_tokens: "",
   timeout_s: "",
   extra_params: "",
+  sintesis_modo: "",
 };
 
 export default function MotorIA() {
@@ -92,6 +104,18 @@ export default function MotorIA() {
   const [error, setError] = useState("");
   const [aviso, setAviso] = useState("");
   const [forzar, setForzar] = useState(false);
+  // Modelos que ofrece el servicio elegido (para elegir de una lista).
+  const [modelos, setModelos] = useState<{ lista: string[]; ollama: boolean; error: string; cargando: boolean }>({
+    lista: [],
+    ollama: false,
+    error: "",
+    cargando: false,
+  });
+  const [manual, setManual] = useState(false);
+  const [verif, setVerif] = useState<(Tarea & { modelo: string }) | null>(null);
+  const [descarga, setDescarga] = useState<(Tarea & { modelo: string }) | null>(null);
+  const vivo = useRef(true);
+  useEffect(() => () => void (vivo.current = false), []);
 
   async function cargar() {
     const [c, p, h] = await Promise.all([api.llmConfig(), api.llmProveedores(), api.llmHistorial()]);
@@ -120,6 +144,69 @@ export default function MotorIA() {
     setResultado(null);
     setError("");
     setForzar(false);
+    setManual(false);
+    setModelos({ lista: [], ollama: false, error: "", cargando: false });
+    const p = presets.find((x) => x.nombre === nombre);
+    // Si el servidor ya tiene lo necesario (clave o servicio sin clave), se listan sus modelos de inmediato.
+    if (p && (!p.requiere_api_key || p.clave_en_servidor)) cargarModelos({ ...VACIO, proveedor: nombre });
+  }
+
+  async function cargarModelos(f = form) {
+    if (!f.proveedor) return;
+    setModelos((m) => ({ ...m, cargando: true, error: "" }));
+    try {
+      const r = await api.llmModelos({
+        proveedor: f.proveedor,
+        base_url: f.base_url.trim() || null,
+        api_key: f.api_key.trim() || null,
+      });
+      setModelos({ lista: r.modelos || [], ollama: !!r.ollama, error: r.error || "", cargando: false });
+      if ((r.modelos || []).length === 0) setManual(true);
+    } catch (e) {
+      setModelos({ lista: [], ollama: false, error: mensajeError(e), cargando: false });
+      setManual(true);
+    }
+  }
+
+  // Sigue una tarea en segundo plano (verificación o descarga) hasta que termine.
+  async function seguir(id: string, alAvanzar: (t: Tarea) => void): Promise<Tarea> {
+    for (;;) {
+      await sleep(1500);
+      if (!vivo.current) return { id, estado: "ERROR", error: "cancelado" };
+      const r = await api.llmTarea(id);
+      const t: Tarea = { id, ...r };
+      if (r.estado === "OK" || r.estado === "ERROR") return t;
+      alAvanzar(t);
+    }
+  }
+
+  async function verificar(actual = false) {
+    setError("");
+    setResultado(null);
+    try {
+      const r = await api.llmVerificar(actual ? undefined : cuerpo());
+      setVerif({ id: r.tarea, estado: "PENDIENTE", modelo: r.modelo });
+      const fin = await seguir(r.tarea, (t) => setVerif({ ...t, modelo: r.modelo }));
+      setVerif({ ...fin, modelo: r.modelo });
+    } catch (e) {
+      setVerif(null);
+      setError(mensajeError(e));
+    }
+  }
+
+  async function descargar() {
+    setError("");
+    const modelo = form.modelo.trim();
+    try {
+      const r = await api.llmDescargar(cuerpo());
+      setDescarga({ id: r.tarea, estado: "PENDIENTE", modelo });
+      const fin = await seguir(r.tarea, (t) => setDescarga({ ...t, modelo }));
+      setDescarga({ ...fin, modelo });
+      if (fin.estado === "OK") await cargarModelos();
+    } catch (e) {
+      setDescarga(null);
+      setError(mensajeError(e));
+    }
   }
 
   function cuerpo() {
@@ -142,6 +229,7 @@ export default function MotorIA() {
       context_tokens: form.context_tokens ? Number(form.context_tokens) : null,
       timeout_s: form.timeout_s ? Number(form.timeout_s) : null,
       extra_params: extra,
+      sintesis_modo: form.sintesis_modo || null,
     };
   }
 
@@ -228,6 +316,12 @@ export default function MotorIA() {
   }
 
   const fallaPrueba = resultado && resultado.ok === false;
+  const verificando = !!verif && (verif.estado === "PENDIENTE" || verif.estado === "EN_CURSO");
+  const puedeDescargar =
+    preset?.nombre === "local" &&
+    modelos.ollama &&
+    !!form.modelo.trim() &&
+    !modelos.lista.includes(form.modelo.trim());
 
   return (
     <div className="page">
@@ -287,6 +381,16 @@ export default function MotorIA() {
                   Probar conexión
                 </button>
               )}
+              {efectiva && cfg?.puede_editar && (
+                <button
+                  className="btn btn--secondary btn--sm"
+                  onClick={() => verificar(true)}
+                  disabled={!!ocupado || verificando}
+                >
+                  <Icon name="shield-check" />
+                  Verificar modelo
+                </button>
+              )}
               {efectiva?.origen === "ui" && puedeEditar && (
                 <button className="btn btn--ghost btn--sm" onClick={volverEnv} disabled={!!ocupado}>
                   {ocupado === "env" ? <span className="spin" /> : <Icon name="arrow-left" />}
@@ -330,6 +434,10 @@ export default function MotorIA() {
                   valor={efectiva.context_tokens ? `${efectiva.context_tokens.toLocaleString("es-CL")} tokens` : "Topes fijos del .env"}
                 />
                 <Dato etiqueta="Modo JSON" valor={efectiva.json_mode ? "Sí" : "No"} />
+                <Dato
+                  etiqueta="Redacción del SITREP"
+                  valor={MODO_SINTESIS[efectiva.sintesis_modo] || efectiva.sintesis_modo}
+                />
               </div>
             )}
             {efectiva && (
@@ -358,6 +466,9 @@ export default function MotorIA() {
             </span>
           </div>
         )}
+
+        {verif && <PanelVerificacion v={verif} onCerrar={() => setVerif(null)} />}
+        {descarga && <PanelDescarga d={descarga} onCerrar={() => setDescarga(null)} />}
 
         {/* ---------------- Cambiar ---------------- */}
         {puedeEditar && (
@@ -400,17 +511,76 @@ export default function MotorIA() {
                   <label className="label" htmlFor="ia-modelo">
                     Modelo {preset && !preset.modelo && <span className="req">*</span>}
                   </label>
-                  <input
-                    id="ia-modelo"
-                    className="input mono"
-                    placeholder={preset?.modelo || "p. ej. qwen3.8:27b"}
-                    value={form.modelo}
-                    onChange={(e) => set("modelo", e.target.value)}
-                    disabled={!preset}
-                  />
-                  <span className="hint">
-                    {preset?.modelo ? `Vacío = ${preset.modelo}` : "Nombre exacto del modelo en el servicio."}
-                  </span>
+                  {preset && modelos.lista.length > 0 && !manual ? (
+                    <select
+                      id="ia-modelo"
+                      className="select mono"
+                      value={form.modelo}
+                      onChange={(e) => {
+                        if (e.target.value === "__otro") {
+                          setManual(true);
+                          set("modelo", "");
+                        } else set("modelo", e.target.value);
+                      }}
+                    >
+                      <option value="">{preset.modelo ? `Por defecto (${preset.modelo})` : "Elegir…"}</option>
+                      {modelos.lista.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                      <option value="__otro">Otro (escribir el nombre)…</option>
+                    </select>
+                  ) : (
+                    <input
+                      id="ia-modelo"
+                      className="input mono"
+                      placeholder={preset?.modelo || "p. ej. qwen3.8:27b"}
+                      value={form.modelo}
+                      onChange={(e) => set("modelo", e.target.value)}
+                      disabled={!preset}
+                    />
+                  )}
+                  {preset && (
+                    <span className="hint">
+                      {modelos.cargando ? (
+                        <>Consultando los modelos del servicio…</>
+                      ) : modelos.lista.length > 0 ? (
+                        <>
+                          {modelos.lista.length} modelos disponibles en el servicio
+                          {modelos.ollama ? " (ya descargados en Ollama)" : ""}.{" "}
+                          {manual && (
+                            <>
+                              <button className="linkbtn" onClick={() => setManual(false)}>
+                                Elegir de la lista
+                              </button>
+                              {" · "}
+                            </>
+                          )}
+                        </>
+                      ) : modelos.error ? (
+                        <>No se pudo obtener la lista ({modelos.error}). Escriba el nombre exacto. </>
+                      ) : (
+                        <>{preset.modelo ? `Vacío = ${preset.modelo}. ` : "Nombre exacto del modelo en el servicio. "}</>
+                      )}
+                      {!modelos.cargando && (
+                        <button className="linkbtn" onClick={() => cargarModelos()}>
+                          {modelos.lista.length ? "Actualizar lista" : "Ver modelos del servicio"}
+                        </button>
+                      )}
+                    </span>
+                  )}
+                  {puedeDescargar && (
+                    <button
+                      className="btn btn--secondary btn--sm"
+                      style={{ marginTop: 6, alignSelf: "flex-start" }}
+                      onClick={descargar}
+                      disabled={!!ocupado || (descarga?.estado === "PENDIENTE" || descarga?.estado === "EN_CURSO")}
+                    >
+                      <Icon name="download" />
+                      Descargar «{form.modelo.trim()}» en el servidor
+                    </button>
+                  )}
                 </div>
 
                 {preset ? (
@@ -470,6 +640,24 @@ export default function MotorIA() {
                       marginTop: "var(--sp-4)",
                     }}
                   >
+                    <div className="field">
+                      <label className="label" htmlFor="ia-modo">Redacción del SITREP</label>
+                      <select
+                        id="ia-modo"
+                        className="select"
+                        value={form.sintesis_modo}
+                        onChange={(e) => set("sintesis_modo", e.target.value)}
+                      >
+                        <option value="">Según servidor</option>
+                        <option value="auto">Automática</option>
+                        <option value="completa">De una vez</option>
+                        <option value="secciones">Por secciones</option>
+                      </select>
+                      <span className="hint">
+                        “Por secciones” permite usar modelos chicos o locales: el SITREP se redacta en 6 partes.
+                        “Automática” lo hace de una vez y, si el modelo no alcanza, por secciones.
+                      </span>
+                    </div>
                     <div className="field">
                       <label className="label" htmlFor="ia-ctx">Ventana de contexto (tokens)</label>
                       <input
@@ -567,6 +755,10 @@ export default function MotorIA() {
                   {ocupado === "probar" ? <span className="spin" /> : <Icon name="sync" />}
                   Probar sin guardar
                 </button>
+                <button className="btn btn--secondary" onClick={() => verificar(false)} disabled={!preset || !!ocupado || verificando}>
+                  {verificando ? <span className="spin" /> : <Icon name="shield-check" />}
+                  Verificar modelo
+                </button>
                 <button className="btn btn--primary" onClick={activar} disabled={!preset || !!ocupado}>
                   {ocupado === "activar" ? <span className="spin" /> : <Icon name="check-circle" />}
                   Probar y activar
@@ -653,4 +845,128 @@ function safeHost(url: string): string {
   } catch {
     return url;
   }
+}
+
+const VEREDICTO: Record<string, { txt: string; cls: string }> = {
+  COMPATIBLE: { txt: "Compatible", cls: "badge--pub" },
+  COMPATIBLE_CON_OBSERVACIONES: { txt: "Compatible con observaciones", cls: "badge--res" },
+  NO_COMPATIBLE: { txt: "No compatible", cls: "badge--sec" },
+};
+
+function IconoPaso({ estado }: { estado: string }) {
+  if (estado === "ok") return <Icon name="check-circle" style={{ color: "var(--ok)" }} />;
+  if (estado === "advertencia") return <Icon name="alert-triangle" style={{ color: "var(--warn)" }} />;
+  return <Icon name="alert-circle" style={{ color: "var(--danger)" }} />;
+}
+
+function ListaPasos({ pasos }: { pasos: any[] }) {
+  return (
+    <ul className="pasos">
+      {pasos.map((p, i) => (
+        <li key={i}>
+          <IconoPaso estado={p.estado} />
+          <span>
+            <strong>{p.paso}.</strong> {p.detalle}
+            {p.ejemplo && (
+              <span className="hint" style={{ display: "block", marginTop: 2 }}>
+                Ejemplo: “{p.ejemplo}”
+              </span>
+            )}
+          </span>
+          <span className="hint mono">{(p.latencia_ms / 1000).toFixed(1)} s</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PanelVerificacion({ v, onCerrar }: { v: Tarea & { modelo: string }; onCerrar: () => void }) {
+  const enCurso = v.estado === "PENDIENTE" || v.estado === "EN_CURSO";
+  const prog = v.progreso || {};
+  const r = v.resultado;
+  const ver = r ? VEREDICTO[r.veredicto] : null;
+  return (
+    <div className="card">
+      <div className="card__head">
+        <div className="card__title">
+          <Icon name="shield-check" /> Verificación de <span className="mono">{v.modelo}</span>
+        </div>
+        <div className="btn-group">
+          {ver && <span className={"badge badge--lg " + ver.cls}>{ver.txt}</span>}
+          {!enCurso && (
+            <button className="btn btn--ghost btn--sm" onClick={onCerrar} aria-label="Cerrar">
+              <Icon name="x" />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="card__body stack" style={{ gap: "var(--sp-4)" }}>
+        {enCurso && (
+          <>
+            <div className="row" style={{ gap: 8 }}>
+              <span className="spin" />
+              <span>
+                {prog.paso_actual
+                  ? `Paso ${prog.paso_actual} de ${prog.total}: ${prog.descripcion}…`
+                  : "En cola…"}
+              </span>
+            </div>
+            <div className="progressbar">
+              <span style={{ width: `${((prog.paso_actual || 0) - 1) * 25}%` }} />
+            </div>
+            <span className="hint">
+              Se prueba con un parte operacional ficticio. Con modelos locales puede tardar varios minutos.
+            </span>
+          </>
+        )}
+        {(r?.pasos || prog.pasos || []).length > 0 && <ListaPasos pasos={r?.pasos || prog.pasos} />}
+        {r && (
+          <p className="hint" style={{ margin: 0 }}>
+            {r.resumen}
+            {r.modo_sintesis_recomendado === "secciones" &&
+              " Recomendado: redacción del SITREP por secciones (Opciones avanzadas)."}
+          </p>
+        )}
+        {v.estado === "ERROR" && (
+          <div className="alert alert--err" style={{ marginBottom: 0 }}>
+            <Icon name="alert-circle" />
+            <span>La verificación no pudo ejecutarse: {v.error}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PanelDescarga({ d, onCerrar }: { d: Tarea & { modelo: string }; onCerrar: () => void }) {
+  const enCurso = d.estado === "PENDIENTE" || d.estado === "EN_CURSO";
+  const p = d.progreso || {};
+  return (
+    <div className={"alert " + (d.estado === "ERROR" ? "alert--err" : "alert--ok")} style={{ marginBottom: 0 }}>
+      <Icon name={d.estado === "ERROR" ? "alert-circle" : enCurso ? "download" : "check-circle"} />
+      <span style={{ flex: 1 }}>
+        {enCurso && (
+          <>
+            Descargando <span className="mono">{d.modelo}</span> en el servidor Ollama
+            {p.estado ? ` — ${p.estado}` : "…"}
+            {p.pct != null && ` (${p.pct}% · ${p.descargado_mb} de ${p.total_mb} MB)`}
+            <div className="progressbar" style={{ marginTop: 6 }}>
+              <span style={{ width: `${p.pct || 0}%` }} />
+            </div>
+          </>
+        )}
+        {d.estado === "OK" && (
+          <>
+            <strong>{d.modelo}</strong> quedó descargado en el servidor y ya aparece en la lista de modelos.
+          </>
+        )}
+        {d.estado === "ERROR" && <>No se pudo descargar {d.modelo}: {d.error}</>}
+      </span>
+      {!enCurso && (
+        <button className="btn btn--ghost btn--sm" onClick={onCerrar} aria-label="Cerrar">
+          <Icon name="x" />
+        </button>
+      )}
+    </div>
+  );
 }

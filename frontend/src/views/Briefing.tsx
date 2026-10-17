@@ -762,6 +762,20 @@ export default function Briefing() {
         />
       ) : null}
 
+      {!editando && c?.generacion?.avisos?.length > 0 && (
+        <div className="alert alert--warn">
+          <Icon name="alert-triangle" />
+          <span>
+            <strong>Revisar antes de aprobar.</strong> Esta versión se redactó por secciones
+            {numeroMostrado ? ` (v${numeroMostrado})` : ""} y el motor de IA no completó todo:
+            <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+              {c.generacion.avisos.map((a: string, i: number) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          </span>
+        </div>
+      )}
       {editando ? null : !c ? (
         <div className="card">
           <div className="card__body muted">

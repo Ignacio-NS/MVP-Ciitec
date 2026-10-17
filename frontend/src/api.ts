@@ -107,6 +107,11 @@ export const api = {
     request("/llm/probar", { method: "POST", body: cfg ? JSON.stringify(cfg) : undefined }),
   llmActivar: (cfg: any) => request("/llm/config", { method: "PUT", body: JSON.stringify(cfg) }),
   llmVolverEnv: () => request("/llm/config", { method: "DELETE" }),
+  llmModelos: (cfg: any) => request("/llm/modelos", { method: "POST", body: JSON.stringify(cfg) }),
+  llmVerificar: (cfg?: any) =>
+    request("/llm/verificar", { method: "POST", body: cfg ? JSON.stringify(cfg) : undefined }),
+  llmDescargar: (cfg: any) => request("/llm/descargar", { method: "POST", body: JSON.stringify(cfg) }),
+  llmTarea: (id: string) => request(`/llm/tareas/${encodeURIComponent(id)}`),
   info: () => request("/info"),
 };
 
