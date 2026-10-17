@@ -1,9 +1,9 @@
 """Cliente del "juez" LLM (Guia S7, nivel 5: evaluacion por modelo).
 
-Usa el MISMO Gemini que el SUT (misma API key y modelo, via el endpoint
-OpenAI-compatible que ya usa `backend/app/llm/provider.py`), pero el robot
-llama al modelo por su cuenta: el juez debe ser independiente del pipeline
-que genero la respuesta que esta evaluando.
+El juez es cualquier modelo con API compatible con OpenAI (JUDGE_BASE_URL /
+JUDGE_API_KEY / JUDGE_MODEL; por defecto Gemini con GEMINI_*). El robot lo
+llama por su cuenta: el juez debe ser independiente del pipeline que genero la
+respuesta que esta evaluando, idealmente un modelo distinto al del SUT.
 
 El prompt vive versionado en archivos de texto bajo `rubrics/` (Guia S7:
 "exigir prompt versionado, justificacion y calibracion"), nunca hardcodeado
@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 from typing import Callable
 
-from .config import GeminiConfig
+from .config import JudgeConfig
 
 _JSON_INSTRUCCION = (
     "\n\nResponde SOLO con un JSON valido (sin markdown, sin preambulo) con esta forma exacta:\n"
@@ -26,7 +26,7 @@ _JSON_INSTRUCCION = (
 JudgeFn = Callable[[str, dict], dict]
 
 
-def make_judge(gemini: GeminiConfig, rubrics_dir: Path) -> JudgeFn | None:
+def make_judge(gemini: JudgeConfig, rubrics_dir: Path) -> JudgeFn | None:
     """Devuelve una funcion (prompt_id, variables) -> {"score":int,"reason":str}, o None si no hay API key."""
     if not gemini.available:
         return None

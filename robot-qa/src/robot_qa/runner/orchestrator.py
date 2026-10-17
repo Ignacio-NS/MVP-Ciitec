@@ -109,12 +109,18 @@ def run_campaign(
     default_repetitions = campaign_cfg.get("default_repetitions", 1)
     thresholds = {**config.default_thresholds, **campaign_cfg.get("thresholds", {})}
 
+    # Motor de IA del SUT leído de su API (antes se escribía "gemini" fijo, aunque
+    # el SUT estuviera usando otro proveedor).
+    sut_llm = adapter.sut_info() if hasattr(adapter, "sut_info") else {}
     manifest = {
         "run_id": run_id, "campaign": campaign_name,
         "sut_commit": _git_rev(config.sut_root),
         "robot_commit": _git_rev(config.sut_root / "robot-qa"),
         "sut_base_url": config.base_url,
-        "llm_provider": "gemini", "llm_model": config.gemini.model,
+        "llm_provider": sut_llm.get("proveedor", "desconocido"),
+        "llm_model": sut_llm.get("modelo", "desconocido"),
+        "llm_origen": sut_llm.get("origen"),
+        "judge_model": config.judge.model if config.judge.available else None,
         "n_cases": len(cases), "default_repetitions": default_repetitions,
         "thresholds": thresholds, "started_at": started_at,
     }

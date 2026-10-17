@@ -40,7 +40,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     else:
         adapter = ApiAdapter(config.base_url, config.users, verify=config.verify_tls, sut_root=config.sut_root)
 
-    judge = None if args.no_judge else make_judge(config.gemini, config.rubrics_dir)
+    judge = None if args.no_judge else make_judge(config.judge, config.rubrics_dir)
     if judge is None and not args.no_judge:
         print("[aviso] GEMINI_API_KEY no configurada: 'rubric_llm' marcara sus casos como no evaluados")
 

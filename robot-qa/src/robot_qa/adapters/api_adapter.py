@@ -112,6 +112,19 @@ class ApiAdapter:
         self._capture_session_token(username, r)
         return r
 
+    def sut_info(self) -> dict:
+        """Proveedor y modelo de IA que el SUT tiene activos (GET /info).
+
+        Va al manifiesto de la corrida: con un motor de IA intercambiable, cada
+        evidencia debe decir con qué modelo se obtuvo. {} si el SUT no lo expone."""
+        try:
+            r = self._get("operaciones", "/info")
+            if r.status_code == 200:
+                return (r.json() or {}).get("llm") or {}
+        except Exception:  # noqa: BLE001 — el manifiesto no debe tumbar la corrida
+            pass
+        return {}
+
     def _post(self, username: str, path: str, **kwargs) -> httpx.Response:
         r = self._client.post(path, headers=self._headers(username), **kwargs)
         if r.status_code == 401:
