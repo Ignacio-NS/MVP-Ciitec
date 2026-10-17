@@ -75,6 +75,9 @@ services:
     restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     env_file: .env
+    # Permite llegar a un modelo local (Ollama/vLLM) corriendo en el mismo servidor Linux
+    # vía http://host.docker.internal:<puerto> (en Docker Desktop ya existe).
+    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -91,6 +94,7 @@ services:
     restart: unless-stopped
     command: celery -A app.worker.celery_app worker --loglevel=info --pool=threads --concurrency=4
     env_file: .env
+    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
