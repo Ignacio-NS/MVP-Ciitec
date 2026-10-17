@@ -155,7 +155,7 @@ def consolidar_briefing(
         audit.registrar(
             db, accion="GENERACION", actor_id=generado_por,
             entidad_tipo="briefing", entidad_id=briefing_id,
-            detalle={"version": version.numero_version, "fuentes": len(ids)},
+            detalle={"version": version.numero_version, "fuentes": len(ids), "modelo_llm": version.modelo_llm},
         )
         progress.publicar(
             task_id,

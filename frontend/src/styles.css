@@ -197,7 +197,7 @@ a{color:var(--accent);text-decoration:none}
 .brand__name{font-size:var(--tx-md);letter-spacing:.01em}
 .brand__sub{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase}
 .topnav{display:flex;gap:2px;margin-left:var(--sp-4)}
-.topnav__item{
+.topnav__item{white-space:nowrap;
   background:transparent;border:0;color:var(--text-2);
   padding:8px 14px;border-radius:var(--r);cursor:pointer;font-size:var(--tx-md);
   display:flex;align-items:center;gap:7px;transition:var(--speed);text-decoration:none;

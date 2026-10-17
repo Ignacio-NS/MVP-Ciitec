@@ -98,4 +98,27 @@ export const api = {
 
   getAudit: () => request("/audit"),
   verificarAudit: () => request("/audit/verificar"),
+
+  // Motor de IA (Administrador del Sistema; Auditor/Seguridad solo lectura)
+  llmProveedores: () => request("/llm/proveedores"),
+  llmConfig: () => request("/llm/config"),
+  llmHistorial: () => request("/llm/historial"),
+  llmProbar: (cfg?: any) =>
+    request("/llm/probar", { method: "POST", body: cfg ? JSON.stringify(cfg) : undefined }),
+  llmActivar: (cfg: any) => request("/llm/config", { method: "PUT", body: JSON.stringify(cfg) }),
+  llmVolverEnv: () => request("/llm/config", { method: "DELETE" }),
+  info: () => request("/info"),
 };
+
+/** Mensaje legible de un error de la API ({"detail": "..."} de FastAPI). */
+export function mensajeError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  try {
+    const d = JSON.parse(raw).detail;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d)) return d.map((x: any) => x.msg).join("; ");
+  } catch {
+    /* no era JSON */
+  }
+  return raw;
+}

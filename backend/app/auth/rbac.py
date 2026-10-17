@@ -13,6 +13,10 @@ _ORDEN_NIVEL = {"PUBLICO": 0, "RESERVADO": 1, "SECRETO": 2}
 ROLES_AUDITORIA = {"Auditor", "Oficial de Seguridad", "Administrador del Sistema"}
 # Roles que pueden aprobar versiones de briefing (RF-007).
 ROLES_APROBACION = {"Comandante", "Asesor de Operaciones", "Oficial de Operaciones"}
+# Roles que pueden CAMBIAR el motor de IA desde la interfaz (proveedor/modelo/clave).
+ROLES_CONFIG_IA = {"Administrador del Sistema"}
+# Roles que pueden VER qué motor de IA está activo (sin claves).
+ROLES_VER_CONFIG_IA = ROLES_CONFIG_IA | ROLES_AUDITORIA
 # Roles que trascienden la unidad: ven recursos de cualquier unidad (RNF-001).
 # El mando, la auditoría/seguridad y la administración no quedan segmentados por unidad.
 ROLES_TRANSVERSAL = {"Comandante", "Auditor", "Oficial de Seguridad", "Administrador del Sistema"}

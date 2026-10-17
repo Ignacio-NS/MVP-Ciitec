@@ -1039,6 +1039,11 @@ export default function Briefing() {
                         <div className="cell-sub mono" style={{ marginTop: 2, fontSize: 11 }}>
                           {v.aprobado_en ? "Aprobada " + fmtFecha(v.aprobado_en) : "Creada " + fmtFecha(v.creado_en)}
                         </div>
+                        {v.modelo_llm && (
+                          <div className="cell-sub mono" style={{ marginTop: 2, fontSize: 11 }} title="Motor de IA que redactó esta versión">
+                            IA: {v.modelo_llm}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
