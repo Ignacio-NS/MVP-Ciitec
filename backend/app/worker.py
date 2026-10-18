@@ -155,7 +155,11 @@ def consolidar_briefing(
         audit.registrar(
             db, accion="GENERACION", actor_id=generado_por,
             entidad_tipo="briefing", entidad_id=briefing_id,
-            detalle={"version": version.numero_version, "fuentes": len(ids)},
+            detalle={
+                "version": version.numero_version, "fuentes": len(ids), "modelo_llm": version.modelo_llm,
+                "modo_sintesis": ((version.contenido or {}).get("generacion") or {}).get("modo"),
+                "avisos_ia": len(((version.contenido or {}).get("generacion") or {}).get("avisos") or []),
+            },
         )
         progress.publicar(
             task_id,
@@ -178,3 +182,41 @@ def purga_retencion() -> dict:
     from . import retention
 
     return retention.purgar()
+
+
+# ---------------------------------------------------------------------------
+#  Motor de IA: tareas largas lanzadas desde la interfaz (pueden tardar minutos
+#  con modelos locales, así que no se hacen dentro de la petición HTTP).
+# ---------------------------------------------------------------------------
+def _auditar_ia(actor_id: str | None, detalle: dict[str, Any]) -> None:
+    try:
+        with SessionLocal() as db:
+            audit.registrar(db, accion="CONFIG_IA", actor_id=actor_id, entidad_tipo="llm_config",
+                            entidad_id=None, detalle=detalle)
+    except Exception:  # noqa: BLE001 — sin migración 003 la acción no existe; no tumbar la tarea
+        pass
+
+
+@celery_app.task(bind=True, name="app.worker.llm_verificar")
+def llm_verificar(self, paquete: str, actor_id: str | None = None) -> dict:
+    """Prueba un modelo con un parte ficticio (conexión, extracción, redacción, cifras)."""
+    from .llm import ajustes as ajustes_mod
+    from .llm.provider import verificar_modelo
+
+    aj = ajustes_mod.desempaquetar(paquete)
+    res = verificar_modelo(aj, lambda meta: self.update_state(state="PROGRESS", meta=meta))
+    _auditar_ia(actor_id, {"cambio": "VERIFICAR", "modelo": aj.firma(), "veredicto": res["veredicto"],
+                           "resguardo": aj.resguardo})
+    return res
+
+
+@celery_app.task(bind=True, name="app.worker.llm_descargar")
+def llm_descargar(self, paquete: str, actor_id: str | None = None) -> dict:
+    """Descarga el modelo en el servidor Ollama de la red institucional."""
+    from .llm import ajustes as ajustes_mod
+    from .llm import ollama
+
+    aj = ajustes_mod.desempaquetar(paquete)
+    res = ollama.descargar(aj.base_url, aj.modelo, lambda meta: self.update_state(state="PROGRESS", meta=meta))
+    _auditar_ia(actor_id, {"cambio": "DESCARGAR_MODELO", "modelo": aj.firma(), "host": aj.publico()["host"]})
+    return res

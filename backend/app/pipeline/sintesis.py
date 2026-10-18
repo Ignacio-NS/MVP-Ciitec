@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..config import settings
+from ..llm import presupuesto
 from ..llm.provider import LLMProvider
 from ..models import BriefingVersion, Fuente, Hecho, VersionBulletHecho
 
@@ -49,19 +50,29 @@ def _hechos_payload(hechos: list[Hecho]) -> list[dict[str, Any]]:
     ]
 
 
-def contexto_fuentes(db: Session, fuente_ids: list[str]) -> str:
+def limites(provider: LLMProvider | None) -> tuple[int, int, int]:
+    """Topes de entrada de la síntesis según la ventana del modelo activo (si se declaró)."""
+    aj = getattr(provider, "aj", None)
+    if aj is None:
+        return settings.synth_max_hechos, settings.synth_max_contexto_chars, settings.synth_max_chars_por_fuente
+    return presupuesto.limites_sintesis(aj)
+
+
+def contexto_fuentes(
+    db: Session, fuente_ids: list[str], *, max_chars: int | None = None, por_fuente: int | None = None
+) -> str:
     """Texto acotado de las fuentes, con presupuesto POR archivo (para que TODAS aporten
     cifras) y el nombre del archivo antepuesto para poder atribuir cada dato (RF-004)."""
     filas = db.execute(
         select(Fuente.nombre_archivo, Fuente.texto_extraido).where(Fuente.id.in_(fuente_ids))
     ).all()
-    por_fuente = settings.synth_max_chars_por_fuente
+    por_fuente = por_fuente or settings.synth_max_chars_por_fuente
     bloques = [
         f"[{nombre}]\n{(texto or '')[:por_fuente]}"
         for nombre, texto in filas
         if texto
     ]
-    return "\n---\n".join(bloques)[: settings.synth_max_contexto_chars]
+    return "\n---\n".join(bloques)[: max_chars or settings.synth_max_contexto_chars]
 
 
 def sintetizar(
@@ -78,10 +89,11 @@ def sintetizar(
     # Contexto de las fuentes (acotado) para que la síntesis pueda completar
     # las casillas numéricas institucionales que no son "hechos" (RF-004).
     params = dict(parametros or {})
+    max_hechos, max_ctx, por_fuente = limites(provider)
     if fuente_ids:
-        params["contexto_fuentes"] = contexto_fuentes(db, fuente_ids)
+        params["contexto_fuentes"] = contexto_fuentes(db, fuente_ids, max_chars=max_ctx, por_fuente=por_fuente)
 
-    hechos_sel = _select_hechos(hechos, settings.synth_max_hechos)
+    hechos_sel = _select_hechos(hechos, max_hechos)
     contenido = provider.sintetizar_briefing(_hechos_payload(hechos_sel), params)
 
     # numero_version siguiente (append-only, RF-007)
@@ -112,6 +124,9 @@ def sintetizar(
         comentario_cambio=comentario,
         fuentes_agregadas=fuente_ids,
         generado_por=generado_por,
+        # Qué modelo redactó esta versión: el motor de IA es intercambiable, así que
+        # la auditoría debe poder responder con cuál se generó cada SITREP.
+        modelo_llm=provider.info()["firma"] if hasattr(provider, "info") else None,
     )
     db.add(version)
     db.flush()  # obtener version.id

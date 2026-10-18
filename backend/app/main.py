@@ -11,7 +11,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import audit, auth, briefings, fuentes, ws
+from .api import audit, auth, briefings, fuentes, llm, ws
 from .auth.tokens import decodificar_token, renovar_token
 from .storage import ensure_bucket
 
@@ -61,4 +61,6 @@ app.include_router(auth.router)
 app.include_router(fuentes.router)
 app.include_router(briefings.router)
 app.include_router(audit.router)
+app.include_router(llm.router)
+app.include_router(llm.info_router)
 app.include_router(ws.router)

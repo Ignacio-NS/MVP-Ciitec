@@ -3,8 +3,10 @@
 Aplicación web interna on-premise que **lee** documentos heterogéneos (PDF, Word,
 Excel, correos, bitácoras), extrae hechos con LLM, genera un **briefing
 institucional** versionado y trazable, detecta inconsistencias y lo exporta a
-PDF/Word/texto/PPTX. Monorepo, arquitectura en capas, LLM tras una interfaz pluggable
-(por defecto DeepSeek `deepseek-chat`; intercambiable por Gemini, GitHub Models, Groq o modelo local).
+PDF/Word/texto/PPTX. Monorepo, arquitectura en capas, **motor de IA intercambiable**:
+funciona con cualquier modelo (Gemini por defecto; también OpenAI, Claude, DeepSeek,
+Mistral, Groq, cualquier endpoint compatible con OpenAI y modelos locales con Ollama o vLLM).
+Se cambia en el `.env` o desde la interfaz (Administrador del Sistema → *Motor de IA*).
 
 ## Levantar en local
 
@@ -16,9 +18,9 @@ cp .env.example .env          # copiar plantilla de variables
 
 Editar `.env` y completar como mínimo:
 
-- `GEMINI_API_KEY`: clave de https://aistudio.google.com/apikey (proveedor por defecto; sin
-  esto la generación de briefings con IA falla; el resto de la app funciona igual). Para usar
-  otro modelo (Claude, uno local, una nube privada) ver «Proveedor LLM» más abajo.
+- La clave del proveedor de IA elegido en `LLM_PROVIDER` (por defecto `GEMINI_API_KEY`,
+  de https://aistudio.google.com/apikey). Sin clave la generación con IA falla con un
+  error claro; el resto de la app funciona igual. Con `LLM_PROVIDER=local` no se necesita.
 - `JWT_SECRET`: string largo y aleatorio.
 - `ENCRYPTION_KEY`: 32 bytes en base64, p.ej. `openssl rand -base64 32`.
 - Opcional pero recomendado: cambiar los `..._PASSWORD=cambiar_en_local`.
@@ -59,7 +61,7 @@ auditor/seguridad/admin.
 |---|---|
 | RF-001 ingesta | `backend/app/pipeline/ingesta.py` + `storage.py` (MinIO) |
 | RF-002 normalización | `pipeline/normalizacion.py` → `hechos.normalizado` |
-| RF-003 extracción | `pipeline/extraccion.py` + `llm/provider.py` (`LLMProvider`, JSON + Pydantic) |
+| RF-003 extracción | `pipeline/extraccion.py` + `llm/provider.py` (Groq, JSON + Pydantic) |
 | RF-004 generación | `pipeline/sintesis.py` (esquema institucional 6 págs) |
 | RF-005 inconsistencias | `pipeline/deteccion.py` (pgvector + reglas + LLM) |
 | RF-006 trazabilidad | `version_bullet_hechos` + `/briefings/{id}/trazabilidad` |
@@ -89,46 +91,7 @@ Ver [`robot-qa/README.md`](robot-qa/README.md) para el detalle completo.
 
 ## Notas
 
-- **Proveedor LLM (intercambiable):** el sistema no está atado a una lista cerrada de
-  modelos. `LLM_PROVIDER` (en `.env`) elige el back-end sin tocar el pipeline; cualquier
-  modelo se integra implementando la interfaz `LLMProvider` (`backend/app/llm/provider.py`) y
-  registrándolo en `_PROVIDERS`. Por defecto: **Gemini 2.5 Flash**. Un valor desconocido
-  falla con la lista de valores válidos (no cae en otro proveedor). Cada llamada deja una
-  línea `llm_call ...` en el log (proveedor, modelo, operación, latencia, tokens, intento);
-  nunca se registra el contenido de prompts ni de respuestas.
-
-  | `LLM_PROVIDER` | Variables |
-  |---|---|
-  | `gemini` (por defecto) | `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-2.5-flash`, `GEMINI_BASE_URL` |
-  | `anthropic` (Claude) | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL=claude-opus-5-5` (SDK oficial) |
-  | `deepseek` | `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL=deepseek-chat`, `DEEPSEEK_BASE_URL` |
-  | `groq` | `GROQ_API_KEY`, `GROQ_MODEL=llama-3.3-70b-versatile` |
-  | `github` | `GITHUB_TOKEN` (PAT con permiso Models), `GITHUB_MODEL=openai/gpt-4o` |
-  | `openai_compat` | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_JSON_MODE=true\|false` |
-  | `local` | `LOCAL_LLM_BASE_URL` (por defecto `http://localhost:11434/v1`), `LOCAL_LLM_MODEL`, `LOCAL_LLM_API_KEY` (opcional), `LLM_JSON_MODE` |
-
-  Comunes a todos: `LLM_MAX_RETRIES`, `LLM_MAX_OUTPUT_TOKENS`.
-
-  **Modalidades de resguardo de la información** (el Ejército elige según la clasificación):
-
-  | Modalidad | Modelos / servicios | `LLM_PROVIDER` | ¿La información sale de la red del Ejército? |
-  |---|---|---|---|
-  | Modelo local en la red | Pesos abiertos (Llama, Mistral, Qwen, Gemma, gpt-oss) servidos con Ollama o vLLM | `local` | No |
-  | Nube privada o dedicada | Azure OpenAI, Amazon Bedrock, Google Vertex AI (por su endpoint compatible con OpenAI) o un gateway institucional | `openai_compat` | Solo hacia la nube dedicada |
-  | API pública del proveedor | GPT (`openai_compat` con `https://api.openai.com/v1`), Claude (`anthropic`), Gemini (`gemini`) | `gemini`, `anthropic`, `openai_compat` | Sí |
-
-  **Apuntar a un servidor local existente** (Ollama o vLLM; `docker-compose.yml` no lo levanta):
-
-  ```
-  LLM_PROVIDER=local
-  LOCAL_LLM_MODEL=<nombre del modelo, p.ej. el que muestra `ollama list`>
-  LOCAL_LLM_BASE_URL=http://host.docker.internal:11434/v1   # Ollama en la máquina anfitriona (Docker Desktop)
-  #   vLLM: http://<host>:8000/v1  ·  Linux: usar la IP del host en lugar de host.docker.internal
-  ```
-
-  Si el endpoint rechaza `response_format` (modo JSON), poner `LLM_JSON_MODE=false`: el JSON lo
-  garantizan el prompt y la reparación de JSON. Ajustar `LLM_MAX_OUTPUT_TOKENS` a la salida
-  máxima del modelo (con endpoints propios es también el techo; no se escala).
+- **Motor de IA (cualquier modelo):** ver la sección siguiente.
 - **Plantilla pixel-perfect (RF-008):** dos modos (`EXPORT_STYLE`):
   - `overlay` (por defecto): usa las **6 PNG** de `backend/app/templates/` como
     fondo exacto de cada página A4 y **sobrepone los datos** de la IA en las
@@ -142,3 +105,50 @@ Ver [`robot-qa/README.md`](robot-qa/README.md) para el detalle completo.
   se rellenan por overlay desde el briefing (`personal.slc`, `operaciones.guardian_soberano`,
   `logistica.resumen`, etc.). Si retocas la plantilla, vuelve a correr el script.
 - **SQLAlchemy síncrono** a propósito (worker Celery prefork comparte el ORM).
+
+## Motor de IA
+
+El pipeline habla con la IA solo a través de `LLMProvider` (`backend/app/llm/provider.py`).
+Dos adaptadores cubren cualquier modelo: uno para APIs compatibles con OpenAI y uno
+nativo para Claude. Qué modelo responde lo decide la **configuración efectiva**:
+
+1. **Interfaz** (Administrador del Sistema → *Motor de IA*): elegir proveedor y modelo,
+   probar la conexión y activar. Se aplica a la próxima generación sin reiniciar; la
+   clave se guarda cifrada y cada cambio queda en la auditoría (`CONFIG_IA`).
+   Auditor y Oficial de Seguridad pueden verla, no cambiarla.
+2. **`.env` del servidor** (`LLM_PROVIDER` + variables `LLM_*`): respaldo cuando la
+   interfaz no tiene nada activo. `LLM_CONFIG_UI=false` bloquea la interfaz y
+   `LLM_PROVEEDORES_PERMITIDOS` limita qué proveedores se pueden elegir.
+
+| `LLM_PROVIDER` | Dónde corren los documentos | Qué configurar |
+|---|---|---|
+| `local` | Red institucional (Ollama / vLLM) | `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LLM_CONTEXT_TOKENS` |
+| `openai_compat` | Nube privada (Azure, Bedrock, Vertex) o gateway | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` |
+| `litellm` | Gateway incluido → más de 100 servicios (Bedrock nativo, Vertex, Cohere…) | `LITELLM_MASTER_KEY`, `LITELLM_MODEL`, `infra/litellm/config.yaml` |
+| `gemini` (por defecto) | API pública de Google | `GEMINI_API_KEY`, `GEMINI_MODEL` |
+| `openai` | API pública de OpenAI | `OPENAI_API_KEY`, `OPENAI_MODEL` |
+| `anthropic` | API pública de Anthropic | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
+| `deepseek`, `mistral`, `groq`, `github` | API pública | `<PROVEEDOR>_API_KEY`, `<PROVEEDOR>_MODEL` |
+
+**Para que sirva cualquier modelo** (también los chicos o locales):
+
+- *Lista de modelos*: la interfaz consulta al servicio qué modelos tiene (`GET /models`) y
+  los ofrece en una lista. En Ollama son los ya descargados; uno nuevo se descarga desde
+  la misma pantalla (botón *Descargar en el servidor*, usa `/api/pull` de Ollama).
+- *Redacción por secciones* (`LLM_SINTESIS_MODO`): `auto` (por defecto) redacta el SITREP
+  de una vez y, si el modelo no alcanza o su ventana es < 32k, lo rehace en 6 llamadas
+  chicas; `secciones` lo hace siempre por partes; `completa`, siempre de una vez. Si una
+  sección secundaria falla queda vacía y la versión muestra un aviso para revisarla.
+- *Verificar modelo*: prueba el modelo con un parte ficticio (conexión, extracción,
+  resumen ejecutivo y respeto de cifras) y entrega un veredicto. No reemplaza al Robot QA.
+- *Gateway LiteLLM*: `docker compose --profile gateway up -d litellm` y declarar los
+  modelos en `infra/litellm/config.yaml`; en el sistema, proveedor *Gateway LiteLLM*.
+
+Bases ya creadas deben aplicar la migración:
+`docker compose exec -T db psql -U $DB_USER -d $DB_NAME < db/migrations/003_llm_configurable.sql`.
+Si se cambia a `anthropic` hay que reconstruir las imágenes (`docker compose build api worker`).
+
+Cada llamada deja una línea `llm_call` en `docker compose logs worker` con proveedor,
+modelo, operación, latencia y tokens (nunca el contenido). Cada versión del SITREP
+guarda qué modelo la redactó (`briefing_versiones.modelo_llm`) y el Robot QA lo lee
+de `GET /api/info` para su manifiesto.

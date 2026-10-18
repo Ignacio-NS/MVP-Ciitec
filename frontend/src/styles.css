@@ -197,7 +197,7 @@ a{color:var(--accent);text-decoration:none}
 .brand__name{font-size:var(--tx-md);letter-spacing:.01em}
 .brand__sub{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:.1em;text-transform:uppercase}
 .topnav{display:flex;gap:2px;margin-left:var(--sp-4)}
-.topnav__item{
+.topnav__item{white-space:nowrap;
   background:transparent;border:0;color:var(--text-2);
   padding:8px 14px;border-radius:var(--r);cursor:pointer;font-size:var(--tx-md);
   display:flex;align-items:center;gap:7px;transition:var(--speed);text-decoration:none;
@@ -541,6 +541,13 @@ textarea.input{height:auto;min-height:60px;padding:8px 12px;resize:vertical;line
 .alert svg{width:15px;height:15px;flex:none}
 .alert--err{background:var(--sec-bg);border:1px solid var(--sec-border);color:var(--sec)}
 .alert--ok{background:var(--pub-bg);border:1px solid var(--pub-border);color:var(--pub)}
+.alert--warn{background:var(--res-bg);border:1px solid var(--res-border);color:var(--res);align-items:flex-start}
+.linkbtn{background:none;border:0;padding:0;color:var(--info);cursor:pointer;font:inherit;text-decoration:underline;text-underline-offset:2px}
+.progressbar{height:6px;border-radius:999px;background:var(--border);overflow:hidden}
+.progressbar>span{display:block;height:100%;background:var(--info);transition:width .3s ease}
+.pasos{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pasos li{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:start;font-size:var(--tx-sm)}
+.pasos li svg{width:16px;height:16px;margin-top:2px}
 
 /* ============================================================
    ESTADO VACÍO / SKELETON

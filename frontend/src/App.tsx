@@ -9,13 +9,17 @@ import Briefings from "./views/Briefings";
 import Briefing from "./views/Briefing";
 import Fuente from "./views/Fuente";
 import Auditoria from "./views/Auditoria";
+import MotorIA from "./views/MotorIA";
 
 const ROLES_AUDITORIA = ["Auditor", "Oficial de Seguridad", "Administrador del Sistema"];
+// Ver el motor de IA activo: los mismos roles; cambiarlo: solo el Administrador del Sistema.
+const ROLES_MOTOR_IA = ROLES_AUDITORIA;
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { tema, alternar } = useTheme();
   const esAuditor = user?.roles.some((r) => ROLES_AUDITORIA.includes(r));
+  const veMotorIA = user?.roles.some((r) => ROLES_MOTOR_IA.includes(r));
   const nivel = (user?.nivel_habilitacion || "RESERVADO").toUpperCase();
   const navCls = ({ isActive }: { isActive: boolean }) => "topnav__item" + (isActive ? " is-active" : "");
 
@@ -51,6 +55,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             <NavLink to="/auditoria" className={navCls}>
               <Icon name="shield-check" />
               Auditoría
+            </NavLink>
+          )}
+          {veMotorIA && (
+            <NavLink to="/motor-ia" className={navCls}>
+              <Icon name="bolt" />
+              Motor de IA
             </NavLink>
           )}
         </nav>
@@ -113,6 +123,7 @@ export default function App() {
       <Route path="/briefings/:id" element={<Protected><Briefing /></Protected>} />
       <Route path="/fuentes/:id" element={<Protected><Fuente /></Protected>} />
       <Route path="/auditoria" element={<Protected><Auditoria /></Protected>} />
+      <Route path="/motor-ia" element={<Protected><MotorIA /></Protected>} />
       <Route path="*" element={<Navigate to="/briefings" replace />} />
     </Routes>
   );

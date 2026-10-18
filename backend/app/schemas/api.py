@@ -43,3 +43,24 @@ class EditarVersionIn(BaseModel):
     contenido: dict
     base_version: int | None = None  # versión desde la que se editó (default: la activa)
     comentario: str | None = None
+
+
+class LLMConfigIn(BaseModel):
+    """Configuración del motor de IA enviada desde la interfaz de administración.
+
+    `api_key`: None = conservar la clave ya guardada para ese proveedor (o usar la
+    del .env); "" = borrar la guardada y usar la del .env; texto = clave nueva."""
+
+    proveedor: str
+    modelo: str | None = None
+    base_url: str | None = None
+    api_key: str | None = None
+    json_mode: bool | None = None
+    temperature: str | None = None
+    token_param: str | None = None
+    extra_params: dict | None = None
+    context_tokens: int | None = None
+    timeout_s: float | None = None
+    sintesis_modo: str | None = None   # auto | completa | secciones
+    probar: bool = True     # probar la conexión antes de activar
+    forzar: bool = False    # activar aunque la prueba falle

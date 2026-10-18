@@ -42,7 +42,7 @@ TipoInconsistencia = ENUM("DUPLICADO", "CONTRADICCION", "DESACTUALIZADO", "INCOM
 FormatoExport = ENUM("PDF", "WORD", "TEXTO", name="formato_export", create_type=False)
 AccionAudit = ENUM(
     "LOGIN", "INGESTA", "GENERACION", "EDICION", "APROBACION", "EXPORTACION",
-    "CONSULTA_CLASIFICADA", "RECONSTRUCCION",
+    "CONSULTA_CLASIFICADA", "RECONSTRUCCION", "CONFIG_IA",
     name="accion_audit", create_type=False,
 )
 
@@ -132,6 +132,7 @@ class BriefingVersion(Base):
     aprobado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
     aprobado_en = Column(DateTime(timezone=True))
     creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    modelo_llm = Column(Text)  # "proveedor/modelo" que redactó la versión (NULL en ediciones manuales)
 
 
 class VersionBulletHecho(Base):
@@ -183,3 +184,28 @@ __all__ = [
     "BriefingVersion", "VersionBulletHecho", "Inconsistencia", "Exportacion",
     "AuditLog",
 ]
+
+
+class LLMConfig(Base):
+    """Configuración del motor de IA elegida desde la interfaz (append-only).
+
+    Cada cambio inserta una fila; solo una puede estar `vigente`. Sin fila vigente,
+    manda el .env del servidor. La API key va cifrada en reposo (AES-256-GCM)."""
+
+    __tablename__ = "llm_config"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    proveedor = Column(Text, nullable=False)
+    modelo = Column(Text)
+    base_url = Column(Text)
+    api_key = Column("api_key_cifrada", EncryptedText)
+    json_mode = Column(Boolean)
+    temperature = Column(Text)
+    token_param = Column(Text)
+    extra_params = Column(JSONB)
+    context_tokens = Column(Integer)
+    timeout_s = Column(Float)
+    sintesis_modo = Column(Text)
+    vigente = Column(Boolean, nullable=False, default=False)
+    creado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
+    creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    desactivado_en = Column(DateTime(timezone=True))

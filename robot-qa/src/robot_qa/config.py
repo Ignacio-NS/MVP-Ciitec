@@ -32,7 +32,13 @@ def _parse_env_file(path: Path) -> dict[str, str]:
 
 
 @dataclass
-class GeminiConfig:
+class JudgeConfig:
+    """Juez LLM (nivel 5). Cualquier endpoint compatible con OpenAI.
+
+    Variables: JUDGE_BASE_URL / JUDGE_API_KEY / JUDGE_MODEL. Si no se definen se usa
+    Gemini (GEMINI_*), como antes. Conviene que el juez sea un modelo DISTINTO al
+    del SUT, para que un modelo no se evalúe a sí mismo."""
+
     api_key: str = ""
     base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     model: str = "gemini-2.5-flash"
@@ -42,12 +48,16 @@ class GeminiConfig:
         return bool(self.api_key)
 
 
+# Compatibilidad con código/tests que importaban el nombre anterior.
+GeminiConfig = JudgeConfig
+
+
 @dataclass
 class RobotQaConfig:
     base_url: str = "https://localhost/api"
     verify_tls: bool = False
     users: dict[str, str] = field(default_factory=dict)
-    gemini: GeminiConfig = field(default_factory=GeminiConfig)
+    judge: JudgeConfig = field(default_factory=JudgeConfig)
     default_thresholds: dict = field(default_factory=dict)
     campaigns_dir: Path = ROBOT_QA_DIR / "config" / "campaigns"
     testcases_dir: Path = ROBOT_QA_DIR / "testcases"
@@ -70,10 +80,10 @@ def load_config(env_path: Path | None = None, thresholds_path: Path | None = Non
     return RobotQaConfig(
         base_url=env.get("VITE_API_URL", "https://localhost/api"),
         users=users,
-        gemini=GeminiConfig(
-            api_key=env.get("GEMINI_API_KEY", ""),
-            base_url=env.get("GEMINI_BASE_URL", GeminiConfig.base_url),
-            model=env.get("GEMINI_MODEL", GeminiConfig.model),
+        judge=JudgeConfig(
+            api_key=env.get("JUDGE_API_KEY") or env.get("GEMINI_API_KEY", ""),
+            base_url=env.get("JUDGE_BASE_URL") or env.get("GEMINI_BASE_URL", JudgeConfig.base_url),
+            model=env.get("JUDGE_MODEL") or env.get("GEMINI_MODEL", JudgeConfig.model),
         ),
         default_thresholds=default_thresholds,
     )

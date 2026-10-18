@@ -21,7 +21,6 @@ from sqlalchemy.orm import Session
 from .. import audit, storage
 from ..auth import rbac
 from ..auth.deps import CurrentUser, get_current_user, require_roles
-from ..config import settings
 from ..db import get_db
 from ..llm.provider import LLMError, get_llm_provider
 from ..models import (
@@ -197,6 +196,7 @@ def versiones(
         "aprobado_por": str(v.aprobado_por) if v.aprobado_por else None,
         "aprobado_en": v.aprobado_en.isoformat() if v.aprobado_en else None,
         "creado_en": v.creado_en.isoformat() if v.creado_en else None,
+        "modelo_llm": v.modelo_llm,
     } for v in filas]}
 
 
@@ -211,7 +211,7 @@ def version_n(briefing_id: str, numero: int, user: CurrentUser = Depends(get_cur
     if v is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Versión no encontrada")
     return {"id": str(v.id), "numero_version": v.numero_version, "contenido": v.contenido,
-            "creado_en": v.creado_en.isoformat() if v.creado_en else None}
+            "creado_en": v.creado_en.isoformat() if v.creado_en else None, "modelo_llm": v.modelo_llm}
 
 
 @router.get("/{briefing_id}/diff/{a}/{b}")
@@ -511,13 +511,18 @@ def completar_hoja(
 
     NO persiste: devuelve la hoja para que el usuario la revise y guarde (versión nueva)."""
     b = _briefing_autorizado(db, user, briefing_id)
+    try:
+        provider = get_llm_provider()
+    except LLMError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+    max_hechos, max_ctx, por_fuente = sintesis.limites(provider)
     hechos: list = []
     if hoja.documentos:
         # Con documentos adjuntos, la hoja se completa SOLO con ellos (no con los hechos
         # del briefing): es la información que el usuario quiere ver en esa hoja.
         if len(hoja.documentos) > _DOC_MAX_POR_HOJA:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Máximo {_DOC_MAX_POR_HOJA} documentos por hoja")
-        por_doc = min(15000, settings.synth_max_contexto_chars // len(hoja.documentos))
+        por_doc = min(15000, max_ctx // len(hoja.documentos))
         bloques_ctx = []
         for d in hoja.documentos:
             # Solo objetos adjuntados a ESTE briefing (evita leer objetos ajenos).
@@ -536,13 +541,13 @@ def completar_hoja(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "El briefing aún no tiene versión")
         fuente_ids = [str(f) for f in (v.fuentes_agregadas or [])]
         hechos = db.execute(select(Hecho).where(Hecho.fuente_id.in_(fuente_ids))).scalars().all() if fuente_ids else []
-        hechos = sintesis._select_hechos(list(hechos), settings.synth_max_hechos)
-        ctx = sintesis.contexto_fuentes(db, fuente_ids) if fuente_ids else ""
+        hechos = sintesis._select_hechos(list(hechos), max_hechos)
+        ctx = sintesis.contexto_fuentes(db, fuente_ids, max_chars=max_ctx, por_fuente=por_fuente) if fuente_ids else ""
 
     entrada = hoja.model_dump()
     entrada["id"] = entrada["id"] or uuid.uuid4().hex[:8]
     try:
-        r = get_llm_provider().completar_hoja(sintesis._hechos_payload(hechos), ctx, entrada)
+        r = provider.completar_hoja(sintesis._hechos_payload(hechos), ctx, entrada)
     except LLMError as e:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
     except NotImplementedError as e:

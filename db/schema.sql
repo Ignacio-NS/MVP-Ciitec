@@ -22,7 +22,8 @@ CREATE TYPE estado_briefing     AS ENUM ('BORRADOR', 'APROBADO');               
 CREATE TYPE tipo_inconsistencia AS ENUM ('DUPLICADO', 'CONTRADICCION', 'DESACTUALIZADO', 'INCOMPLETO'); -- RF-005
 CREATE TYPE formato_export      AS ENUM ('PDF', 'WORD', 'TEXTO');               -- RF-008
 CREATE TYPE accion_audit        AS ENUM ('LOGIN', 'INGESTA', 'GENERACION', 'EDICION', 'APROBACION',
-                                         'EXPORTACION', 'CONSULTA_CLASIFICADA', 'RECONSTRUCCION'); -- RNF-003
+                                         'EXPORTACION', 'CONSULTA_CLASIFICADA', 'RECONSTRUCCION',
+                                         'CONFIG_IA'); -- RNF-003
 
 -- =====================================================================
 --  IDENTIDAD Y CONTROL DE ACCESO  (RNF-001, RNF-002)
@@ -130,6 +131,7 @@ CREATE TABLE briefing_versiones (
     aprobado_por        UUID REFERENCES usuarios(id),    -- quién aprobó (RF-007)
     aprobado_en         TIMESTAMPTZ,
     creado_en           TIMESTAMPTZ NOT NULL DEFAULT now(), -- ancla temporal para RF-009
+    modelo_llm          TEXT,                            -- "proveedor/modelo" que redactó la versión
     UNIQUE (briefing_id, numero_version)
 );
 CREATE INDEX idx_versiones_briefing_tiempo ON briefing_versiones (briefing_id, creado_en);
@@ -229,3 +231,28 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_audit_no_update
     BEFORE UPDATE OR DELETE ON audit_log
     FOR EACH ROW EXECUTE FUNCTION audit_inmutable();
+
+-- ---------------------------------------------------------------------
+--  Motor de IA configurable desde la interfaz (append-only)
+--  Sin fila vigente manda el .env del servidor. La API key va cifrada
+--  por la aplicación (AES-256-GCM) y nunca se devuelve a la interfaz.
+-- ---------------------------------------------------------------------
+CREATE TABLE llm_config (
+    id               BIGSERIAL PRIMARY KEY,
+    proveedor        TEXT NOT NULL,
+    modelo           TEXT,
+    base_url         TEXT,
+    api_key_cifrada  TEXT,
+    json_mode        BOOLEAN,
+    temperature      TEXT,
+    token_param      TEXT,
+    extra_params     JSONB,
+    context_tokens   INT,
+    timeout_s        REAL,
+    sintesis_modo    TEXT,
+    vigente          BOOLEAN NOT NULL DEFAULT false,
+    creado_por       UUID REFERENCES usuarios(id),
+    creado_en        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    desactivado_en   TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX uq_llm_config_vigente ON llm_config (vigente) WHERE vigente;

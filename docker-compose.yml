@@ -75,6 +75,9 @@ services:
     restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     env_file: .env
+    # Permite llegar a un modelo local (Ollama/vLLM) corriendo en el mismo servidor Linux
+    # vía http://host.docker.internal:<puerto> (en Docker Desktop ya existe).
+    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -91,6 +94,7 @@ services:
     restart: unless-stopped
     command: celery -A app.worker.celery_app worker --loglevel=info --pool=threads --concurrency=4
     env_file: .env
+    extra_hosts: ["host.docker.internal:host-gateway"]
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -112,6 +116,26 @@ services:
     env_file: .env
     depends_on:
       - api
+
+  # Gateway OPCIONAL para servicios sin API compatible con OpenAI (Bedrock nativo,
+  # Vertex con cuenta de servicio, Cohere, watsonx…). No arranca por defecto:
+  #   docker compose --profile gateway up -d litellm
+  # Modelos en infra/litellm/config.yaml; en el sistema: proveedor "Gateway LiteLLM".
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.104.3
+    profiles: ["gateway"]
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      # Solo las credenciales que el gateway necesita (no todo el .env).
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION_NAME: ${AWS_REGION_NAME:-}
+      COHERE_API_KEY: ${COHERE_API_KEY:-}
+    volumes:
+      - ./infra/litellm/config.yaml:/app/config.yaml:ro
+    extra_hosts: ["host.docker.internal:host-gateway"]
 
   nginx:
     image: nginx:alpine

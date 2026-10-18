@@ -17,6 +17,7 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   upload: <path d="M12 16V4m0 0L7 9m5-5l5 5M4 20h16" />,
+  download: <path d="M12 4v12m0 0l-5-5m5 5l5-5M4 20h16" />,
   list: (
     <>
       <path d="M5 3h11l3 3v15H5z" />
