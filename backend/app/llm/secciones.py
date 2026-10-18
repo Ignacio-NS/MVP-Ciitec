@@ -220,10 +220,14 @@ def sintetizar(
             if sec.obligatoria:
                 raise
             logger.warning("Sección %s sin completar: %s", sec.clave, e)
-            avisos.append(
-                f"La sección {sec.titulo} no se pudo redactar con este modelo y quedó vacía; "
-                "revísela o regenere con un modelo de mayor capacidad."
-            )
+            texto = str(e)
+            if "429" in texto or "RateLimit" in type(e).__name__ or "quota" in texto.lower() or "413" in texto:
+                motivo = "el servicio de IA rechazó la petición por límite de cuota de su plan"
+                accion = "regenere más tarde o use un plan/proveedor sin ese límite"
+            else:
+                motivo = "el modelo no entregó una respuesta válida"
+                accion = "revísela o regenere con un modelo de mayor capacidad"
+            avisos.append(f"La sección {sec.titulo} quedó vacía: {motivo}; {accion}.")
             continue
         _unir(briefing, parcial)
     return briefing, avisos

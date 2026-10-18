@@ -240,6 +240,51 @@ def _try_repair_json(raw: str) -> dict[str, Any] | None:
         return None
 
 
+_RETRY_DELAY_RE = re.compile(
+    r"(?:retry(?:Delay|[ _-]after)['\"]?\s*[:=]?\s*['\"]?|try again in\s+)(\d+(?:\.\d+)?)\s*s", re.I)
+ESPERA_MAX_CUOTA_S = 60.0
+_TOPE_SALIDA_RE = [
+    re.compile(r"max_(?:completion_)?tokens`?\s*(?:must be less than or equal to|must be <=|<=)\s*`?(\d+)", re.I),
+    re.compile(r"max_tokens\D{0,20}\d+\s*>\s*(\d+),?\s*which is the maximum", re.I),
+    re.compile(r"maximum (?:value for )?(?:`)?max_(?:completion_)?tokens(?:`)? (?:is|of)\s*(\d+)", re.I),
+]
+
+
+def tope_de_salida(e: Exception) -> int | None:
+    """Si el servicio rechazó la petición porque pidió demasiados tokens de salida,
+    devuelve el máximo que acepta (lo dice el propio mensaje de error)."""
+    if type(e).__name__ != "BadRequestError" and getattr(e, "status_code", None) != 400:
+        return None
+    texto = str(e)
+    for rx in _TOPE_SALIDA_RE:
+        m = rx.search(texto)
+        if m:
+            return int(m.group(1))
+    return None
+
+
+def espera_reintento(e: Exception, intento: int) -> float:
+    """Segundos a esperar antes de reintentar.
+
+    Un 429 (cuota por minuto agotada: capas gratis de Gemini y Groq, o límites
+    del plan) no se arregla reintentando al segundo: se respeta lo que pide el
+    servicio (cabecera Retry-After o "retryDelay" en el cuerpo), con un tope de
+    60 s. Cualquier otro error transitorio usa backoff exponencial 1 s, 2 s, 4 s…"""
+    if type(e).__name__ == "RateLimitError" or getattr(e, "status_code", None) == 429:
+        espera = None
+        resp = getattr(e, "response", None)
+        valor = getattr(getattr(resp, "headers", None), "get", lambda *_: None)("retry-after")
+        try:
+            espera = float(valor) if valor is not None else None
+        except (TypeError, ValueError):
+            espera = None
+        if espera is None:
+            m = _RETRY_DELAY_RE.search(str(e))
+            espera = float(m.group(1)) if m else 15.0 * intento
+        return min(max(espera, 1.0), ESPERA_MAX_CUOTA_S)
+    return float(2 ** (intento - 1))
+
+
 @dataclass
 class Respuesta:
     texto: str
@@ -266,7 +311,9 @@ class _ChatJSONProvider(LLMProvider):
     _ERRORES_DEFINITIVOS = ("AuthenticationError", "PermissionDeniedError", "NotFoundError", "BadRequestError")
 
     def _error_definitivo(self, e: Exception) -> bool:
-        return type(e).__name__ in self._ERRORES_DEFINITIVOS
+        # 413: la petición supera lo que el plan admite por minuto (p.ej. Groq gratis, 8.000
+        # tokens/min): reintentar la misma petición no sirve nunca.
+        return type(e).__name__ in self._ERRORES_DEFINITIVOS or getattr(e, "status_code", None) == 413
 
     def _log_uso(self, operacion: str, intento: int, latencia: float, resultado: str,
                  r: Respuesta | None, falla: Exception | None) -> None:
@@ -332,10 +379,18 @@ class _ChatJSONProvider(LLMProvider):
                 raise  # error definitivo (truncación irreparable, rechazo): no reintentar
             except Exception as e:  # red, timeout, JSON inválido transitorio, etc.
                 falla = last_err = e
+                tope = tope_de_salida(e)
+                if tope and tope < max_tokens:
+                    # El modelo admite menos tokens de salida de los pedidos (p.ej. Qwen en
+                    # Groq: 16384). Se ajusta solo, sin que el administrador tenga que saberlo.
+                    logger.warning("El servicio limita la salida de %s a %s tokens; se ajusta", self.modelo, tope)
+                    max_tokens = self.max_output_tokens = self.max_output_techo = tope
+                    resultado = "ajuste_tope"
+                    continue
                 if self._error_definitivo(e):
                     raise LLMError(f"Error no recuperable de {self.nombre}/{self.modelo}: {e}") from e
                 if intento < self.max_retries:
-                    time.sleep(2 ** (intento - 1))  # 1s, 2s, 4s...
+                    time.sleep(espera_reintento(e, intento))
             finally:
                 self._log_uso(operacion, intento,
                               time.perf_counter() - t0 if latencia is None else latencia,

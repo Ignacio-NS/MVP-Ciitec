@@ -308,3 +308,62 @@ def test_api_verificar_y_seguir_tarea(monkeypatch):
     for estado, esperado in [("SUCCESS", "OK"), ("PROGRESS", "EN_CURSO"), ("FAILURE", "ERROR")]:
         monkeypatch.setattr(worker.celery_app, "AsyncResult", lambda i, e=estado: estados[e])
         assert client.get("/llm/tareas/t-1", headers=ADMIN).json()["estado"] == esperado
+
+
+# ---------------------------------------------------------------------------
+#  Cuotas por minuto (429): se respeta la espera que pide el servicio
+# ---------------------------------------------------------------------------
+def test_espera_ante_cuota_agotada():
+    from app.llm.provider import espera_reintento
+
+    class RateLimitError(Exception):
+        pass
+    assert espera_reintento(RateLimitError("429 ... 'retryDelay': '23s' ..."), 1) == 23.0   # Gemini
+    assert espera_reintento(RateLimitError("429 Please try again in 7.66s."), 1) == 7.66    # Groq
+    assert espera_reintento(RateLimitError("429 sin detalle"), 2) == 30.0                   # sin pista: 15 s x intento
+    assert espera_reintento(RateLimitError("429 'retryDelay': '600s'"), 1) == 60.0           # tope de 60 s
+    assert espera_reintento(RuntimeError("timeout"), 3) == 4.0                               # resto: backoff 1-2-4 s
+
+
+def test_se_ajusta_solo_al_tope_de_salida_del_modelo(monkeypatch):
+    """Groq/Qwen rechaza max_tokens > 16384: el sistema lee el tope del error y reintenta."""
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    class BadRequestError(Exception):
+        pass
+    pedidos = []
+
+    def resp(system, user):
+        return json.dumps(EXTRACCION), "stop"
+
+    cli = _Router(resp)
+    original = cli.chat.completions.create
+
+    def create(**kw):
+        pedidos.append(kw["max_tokens"])
+        if kw["max_tokens"] > 16384:
+            raise BadRequestError("Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value'}}")
+        return original(**kw)
+    cli.chat.completions.create = create
+    p = crear_proveedor(_aj(), cli)
+    assert len(p.extraer_hechos("doc")) == 3
+    assert pedidos == [32768, 16384]
+    p.extraer_hechos("otro")
+    assert pedidos[-1] == 16384   # el ajuste queda para las llamadas siguientes
+
+
+def test_peticion_demasiado_grande_para_el_plan_no_se_reintenta(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    class APIStatusError(Exception):
+        status_code = 413
+    n = {"llamadas": 0}
+    cli = _Router(_por_seccion())
+
+    def create(**kw):
+        n["llamadas"] += 1
+        raise APIStatusError("Request too large ... tokens per minute (TPM): Limit 8000, Requested 10142")
+    cli.chat.completions.create = create
+    with pytest.raises(LLMError, match="no recuperable"):
+        crear_proveedor(_aj(), cli).extraer_hechos("doc")
+    assert n["llamadas"] == 1
