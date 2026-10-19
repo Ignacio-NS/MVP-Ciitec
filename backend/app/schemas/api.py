@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LoginIn(BaseModel):
@@ -64,3 +64,9 @@ class LLMConfigIn(BaseModel):
     sintesis_modo: str | None = None   # auto | completa | secciones
     probar: bool = True     # probar la conexión antes de activar
     forzar: bool = False    # activar aunque la prueba falle
+
+
+class LLMDisponibilidadIn(LLMConfigIn):
+    """Modelos a comprobar (vacío = el modelo del formulario)."""
+
+    modelos: list[str] = Field(default_factory=list, max_length=12)

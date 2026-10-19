@@ -108,6 +108,7 @@ export default function Cargar() {
   // Traduce un mensaje del WebSocket a stepper + consola.
   function aplicarEtapa(d: any) {
     const etapa: string = d.etapa;
+    if (etapa === "latido") return; // mensaje de vida del servidor (mantiene la conexión)
     if (etapa === "completado") {
       setPhase(5);
       setPipeEstado("ok");
@@ -134,9 +135,48 @@ export default function Cargar() {
     if (etapa === "procesando") push("· Procesando — " + (d.doc_nombre || ""), "");
     else if (etapa === "documento_ok") push("· Documento procesado — " + (d.doc_nombre || ""), "");
     else if (etapa === "detectando")
-      push("· Detectando inconsistencias" + (d.total_hechos != null ? ` — ${d.total_hechos} hechos` : ""), "accent");
-    else if (etapa === "sintetizando") push("· Sintetizando SITREP institucional", "accent");
+      push(
+        "· Detectando inconsistencias" +
+          (d.total_hechos != null ? ` — ${d.total_hechos} hechos` : "") +
+          (d.modelo ? ` · ${d.modelo} (con modelos de razonamiento puede tardar varios minutos)` : ""),
+        "accent",
+      );
+    else if (etapa === "sintetizando")
+      push(d.detalle ? "· " + d.detalle : "· Sintetizando SITREP institucional", "accent");
     else push("· " + etapa, "");
+  }
+
+  // Sigue el progreso por WebSocket. Si la conexión se corta (proxy, red, pestaña
+  // dormida) se reconecta sola: el servidor reenvía el último estado al reconectar.
+  function seguirTarea(taskId: string, intento = 0, ultimo = { raw: "" }) {
+    let terminado = false;
+    const ws = new WebSocket(wsUrl(taskId));
+    ws.onmessage = (ev) => {
+      if (ev.data === ultimo.raw) return; // el último estado reenviado tras reconectar
+      ultimo.raw = ev.data;
+      try {
+        const d = JSON.parse(ev.data);
+        aplicarEtapa(d);
+        if (d.etapa === "completado" || d.etapa === "error") {
+          terminado = true;
+          ws.close();
+        }
+      } catch {
+        /* ignora mensajes no-JSON */
+      }
+    };
+    ws.onclose = (ev) => {
+      if (terminado || ev.code === 4401) {
+        if (ev.code === 4401) push("(Sesión expirada: el SITREP sigue generándose; búsquelo en Briefings)", "warn");
+        return;
+      }
+      if (intento >= 120) {
+        push("(Sin conexión con el servidor; el SITREP igual se está generando: búsquelo en Briefings)", "warn");
+        return;
+      }
+      if (intento === 0) push("(Conexión de progreso interrumpida; reconectando…)", "warn");
+      setTimeout(() => seguirTarea(taskId, intento + 1, ultimo), 3000);
+    };
   }
 
   async function generar() {
@@ -175,17 +215,7 @@ export default function Cargar() {
       setBriefingId(String(r.briefing_id));
       push(`Generación encolada (${r.fuentes} fuentes). Procesando…`, "accent");
 
-      const ws = new WebSocket(wsUrl(r.task_id));
-      ws.onmessage = (ev) => {
-        try {
-          const d = JSON.parse(ev.data);
-          aplicarEtapa(d);
-          if (d.etapa === "completado" || d.etapa === "error") ws.close();
-        } catch {
-          /* ignora mensajes no-JSON */
-        }
-      };
-      ws.onerror = () => push("(WS sin conexión; el SITREP igual se está generando)", "warn");
+      seguirTarea(String(r.task_id));
     } catch (e: any) {
       push("Error: " + (e?.message || e), "err");
       setPipeEstado("err");

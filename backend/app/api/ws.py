@@ -17,7 +17,10 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..auth.tokens import decodificar_token
 from ..config import settings
-from ..progress import canal
+from ..progress import canal, clave_ultimo
+
+LATIDO_S = 20  # mensaje de vida: ningún proxy corta la conexión por inactividad
+FINALES = ("completado", "error")
 
 router = APIRouter()
 
@@ -33,15 +36,20 @@ async def ws_task(websocket: WebSocket, task_id: str, token: str | None = None):
     ps = r.pubsub()
     await ps.subscribe(canal(task_id))
     try:
+        # Al (re)conectar se envía el último estado conocido.
+        ultimo = await r.get(clave_ultimo(task_id))
+        if ultimo:
+            await websocket.send_text(ultimo)
+            if _etapa(ultimo) in FINALES:
+                return
         while True:
-            msg = await ps.get_message(ignore_subscribe_messages=True, timeout=60)
+            msg = await ps.get_message(ignore_subscribe_messages=True, timeout=LATIDO_S)
             if msg and msg.get("type") == "message":
                 await websocket.send_text(msg["data"])
-                try:
-                    if json.loads(msg["data"]).get("etapa") == "completado":
-                        break
-                except json.JSONDecodeError:
-                    pass
+                if _etapa(msg["data"]) in FINALES:
+                    break
+            elif not msg:
+                await websocket.send_text('{"etapa": "latido"}')
     except WebSocketDisconnect:
         pass
     finally:
@@ -55,3 +63,10 @@ async def ws_task(websocket: WebSocket, task_id: str, token: str | None = None):
             await websocket.close()
         except Exception:
             pass
+
+
+def _etapa(texto: str) -> str | None:
+    try:
+        return json.loads(texto).get("etapa")
+    except (json.JSONDecodeError, AttributeError):
+        return None

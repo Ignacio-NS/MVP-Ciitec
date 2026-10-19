@@ -28,9 +28,10 @@ from ..llm import ajustes as ajustes_mod
 from ..llm import catalogo
 from ..llm.ajustes import ConfigIAError
 from ..llm import ollama
+from ..llm import disponibilidad as disp
 from ..llm.provider import LLMError, listar_modelos, probar_conexion
 from ..models import LLMConfig, Usuario
-from ..schemas.api import LLMConfigIn
+from ..schemas.api import LLMConfigIn, LLMDisponibilidadIn
 
 router = APIRouter(prefix="/llm", tags=["motor-ia"])
 info_router = APIRouter(tags=["motor-ia"])
@@ -292,8 +293,28 @@ def modelos(body: LLMConfigIn, user: CurrentUser = Depends(_editar), db: Session
     try:
         lista = listar_modelos(aj)
     except LLMError as e:
-        return {"modelos": [], "error": str(e), "ollama": es_ollama}
-    return {"modelos": lista, "ollama": es_ollama}
+        return {"modelos": [], "error": str(e), "ollama": es_ollama, "ocultos": 0}
+    # Se ocultan los modelos que no redactan texto (imagen, audio, embeddings…).
+    chat, ocultos = disp.filtrar_chat(lista)
+    return {"modelos": chat, "ollama": es_ollama, "ocultos": ocultos}
+
+
+@router.post("/disponibilidad")
+def disponibilidad(body: LLMDisponibilidadIn, user: CurrentUser = Depends(_editar), db: Session = Depends(get_db)):
+    """¿Existe el modelo y esta clave puede usarlo hoy? Una llamada mínima por modelo
+    (sin documentos) y la causa en palabras: retirado, privado/de pago, sin cuota, etc."""
+    modelos = body.modelos or ([body.modelo] if body.modelo else [])
+    if not modelos:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indique al menos un modelo.")
+    consulta = LLMConfigIn(**body.model_dump(exclude={"modelos"})).model_copy(update={"modelo": modelos[0]})
+    aj = _ajustes_de(consulta, db)
+    descargados = None
+    if aj.proveedor == "local" and ollama.version(aj.base_url) is not None:
+        try:
+            descargados = listar_modelos(aj)
+        except LLMError:
+            descargados = []
+    return {"proveedor": aj.proveedor, "resultados": disp.comprobar_varios(aj, modelos, descargados)}
 
 
 def _lanzar(tarea, body: LLMConfigIn | None, user: CurrentUser, db: Session) -> dict[str, str]:
