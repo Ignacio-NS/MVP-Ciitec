@@ -36,6 +36,9 @@ class ConfigIAError(ValueError):
     """Configuración del motor de IA inválida (proveedor desconocido, falta URL, etc.)."""
 
 
+TECHO_MINIMO = 32768
+
+
 @dataclass
 class Ajustes:
     proveedor: str
@@ -128,7 +131,12 @@ def construir(proveedor: str, cambios: dict[str, Any] | None = None, *, origen: 
 
     modelo = str(c.get("modelo") or p.modelo).strip()
     extra = _parse_extra(c.get("extra_params"))
-    techo = int(c.get("max_output_techo") or 0) or p.max_output_techo or settings.llm_max_output_tokens
+    # Techo al que se escala la salida si se trunca. Nunca menor a 32k: los modelos de
+    # razonamiento (DeepSeek V4, Gemini 3) gastan parte de la salida "pensando" y con un
+    # LLM_MAX_OUTPUT_TOKENS antiguo (8000) cortaban el SITREP. Si el servicio admite menos,
+    # su propio error lo dice y el proveedor se ajusta solo (tope_de_salida).
+    techo = (int(c.get("max_output_techo") or 0) or p.max_output_techo
+             or max(settings.llm_max_output_tokens, TECHO_MINIMO))
     ctx = int(c.get("context_tokens") or settings.llm_context_tokens or 0)
     salida = settings.llm_max_output_tokens
     if ctx:

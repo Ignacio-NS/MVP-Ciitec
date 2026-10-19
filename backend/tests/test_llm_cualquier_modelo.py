@@ -281,7 +281,7 @@ def test_api_modelos(monkeypatch):
     monkeypatch.setattr(api_llm, "listar_modelos", lambda aj: ["qwen3.8:27b", "gpt-oss:20b"])
     monkeypatch.setattr(api_llm.ollama, "version", lambda url: "0.40")
     r = client.post("/llm/modelos", headers=ADMIN, json={"proveedor": "local"})
-    assert r.status_code == 200 and r.json() == {"modelos": ["qwen3.8:27b", "gpt-oss:20b"], "ollama": True}
+    assert r.status_code == 200 and r.json() == {"modelos": ["qwen3.8:27b", "gpt-oss:20b"], "ollama": True, "ocultos": 0}
     assert client.post("/llm/modelos", headers=_h("Auditor"), json={"proveedor": "local"}).status_code == 403
 
 
@@ -367,3 +367,16 @@ def test_peticion_demasiado_grande_para_el_plan_no_se_reintenta(monkeypatch):
     with pytest.raises(LLMError, match="no recuperable"):
         crear_proveedor(_aj(), cli).extraer_hechos("doc")
     assert n["llamadas"] == 1
+
+
+def test_api_disponibilidad(monkeypatch):
+    from app.api import llm as api_llm
+
+    monkeypatch.setattr(api_llm.disp, "_ping", lambda aj, m: (_ for _ in ()).throw(
+        type("NotFoundError", (Exception,), {"status_code": 404})("model_not_found")) if m == "viejo" else None)
+    r = client.post("/llm/disponibilidad", headers=ADMIN,
+                    json={"proveedor": "openai", "api_key": "sk-x", "modelos": ["viejo", "gpt-5-mini"]})
+    assert r.status_code == 200
+    est = {x["modelo"]: x["estado"] for x in r.json()["resultados"]}
+    assert est == {"viejo": "no_existe", "gpt-5-mini": "disponible"}
+    assert client.post("/llm/disponibilidad", headers=_h("Auditor"), json={"proveedor": "openai"}).status_code == 403

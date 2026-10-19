@@ -24,9 +24,18 @@ def canal(task_id: str) -> str:
     return f"task:{task_id}"
 
 
+def clave_ultimo(task_id: str) -> str:
+    return f"task:{task_id}:ultimo"
+
+
 def publicar(task_id: str, payload: dict[str, Any]) -> None:
     try:
-        _redis().publish(canal(task_id), json.dumps(payload, ensure_ascii=False))
+        texto = json.dumps(payload, ensure_ascii=False)
+        r = _redis()
+        # Se guarda el último estado: si el navegador se reconecta (proxy que corta
+        # el WebSocket, pestaña dormida) recibe dónde va el pipeline sin esperar.
+        r.set(clave_ultimo(task_id), texto, ex=86400)
+        r.publish(canal(task_id), texto)
     except Exception:
         # el progreso es informativo; nunca debe tumbar el pipeline
         pass

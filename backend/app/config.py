@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     # Groq (legado)
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     groq_max_retries: int = 3
     # GitHub Models (OpenAI-compatible) — gpt-4o (legado)
     github_token: str = ""

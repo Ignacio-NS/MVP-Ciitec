@@ -19,7 +19,7 @@ criterio que más pesa con información clasificada:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from ..config import settings
@@ -51,7 +51,32 @@ def _gemini_extra(modelo: str) -> dict[str, Any]:
     return {"reasoning_effort": "none"} if modelo.startswith("gemini-2.5") else {}
 
 
+# Modelos que el proveedor RETIRÓ (ya no responden) -> reemplazo recomendado. Si el .env
+# todavía apunta a uno de ellos, el preset usa el reemplazo para no quedar inservible.
+# Fuentes: avisos de deprecación de cada proveedor (revisado 10-2026).
+MODELOS_RETIRADOS: dict[str, str] = {
+    "llama-3.3-70b-versatile": "openai/gpt-oss-120b",      # Groq, apagado 16-08-2026
+    "llama-3.1-70b-versatile": "openai/gpt-oss-120b",
+    "llama3-70b-8192": "openai/gpt-oss-120b",
+    "mixtral-8x7b-32768": "openai/gpt-oss-20b",
+    "gemma2-9b-it": "openai/gpt-oss-20b",
+    "gemini-2.5-flash-lite": "gemini-3.5-flash-lite",      # 404 para cuentas nuevas
+    "gemini-2.0-flash": "gemini-3.5-flash-lite",
+    "gemini-1.5-flash": "gemini-3.5-flash-lite",
+    "gemini-1.5-pro": "gemini-3.5-flash",
+}
+
+
+def vigente(modelo: str) -> str:
+    return MODELOS_RETIRADOS.get((modelo or "").strip(), modelo)
+
+
 def presets() -> dict[str, Preset]:
+    """Presets con su modelo por defecto vigente (nunca uno ya retirado)."""
+    return {k: replace(p, modelo=vigente(p.modelo)) for k, p in _presets_env().items()}
+
+
+def _presets_env() -> dict[str, Preset]:
     """Construye los presets leyendo las variables por proveedor del .env (compatibilidad)."""
     s = settings
     return {

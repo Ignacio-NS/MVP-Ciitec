@@ -426,7 +426,17 @@ class _ChatJSONProvider(LLMProvider):
             logger.warning(
                 "Síntesis completa falló con %s/%s (%s); se rehace por secciones", self.nombre, self.modelo, e
             )
+            self._avisar("El modelo no entregó el SITREP de una vez; se redacta por secciones")
             return self.sintetizar_por_secciones(hechos, parametros, respaldo=True)
+
+    def _avisar(self, texto: str) -> None:
+        """Avance legible para la interfaz (lo conecta el worker); nunca detiene la síntesis."""
+        cb = getattr(self, "al_avanzar", None)
+        if cb:
+            try:
+                cb(texto)
+            except Exception:  # noqa: BLE001
+                pass
 
     def _sintetizar_completa(self, hechos: list[dict[str, Any]], parametros: dict[str, Any]) -> dict[str, Any]:
         payload = json.dumps({"hechos": hechos, "parametros": parametros}, ensure_ascii=False)
@@ -450,6 +460,7 @@ class _ChatJSONProvider(LLMProvider):
             data, avisos = secciones.sintetizar(
                 self._chat_json, hechos, parametros,
                 secciones=secciones_a_usar or secciones.SECCIONES,
+                al_avanzar=lambda i, n, titulo: self._avisar(f"Redactando sección {i + 1} de {n}: {titulo}"),
             )
         except LLMError:
             raise

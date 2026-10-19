@@ -123,8 +123,13 @@ def consolidar_briefing(
             else []
         )
         provider = get_llm_provider()
+        # La síntesis informa su avance (sección por sección) a la consola de la interfaz.
+        provider.al_avanzar = lambda texto: progress.publicar(  # type: ignore[attr-defined]
+            task_id, {"etapa": "sintetizando", "detalle": texto}
+        )
 
-        progress.publicar(task_id, {"etapa": "detectando", "total_hechos": len(hechos)})
+        progress.publicar(task_id, {"etapa": "detectando", "total_hechos": len(hechos),
+                                    "modelo": getattr(provider, "modelo", "")})
         inconsistencias, hechos_unicos = deteccion.detectar(db, hechos, provider)
         for inc in inconsistencias:
             db.add(

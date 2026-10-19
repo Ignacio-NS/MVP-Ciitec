@@ -105,17 +105,32 @@ export default function MotorIA() {
   const [aviso, setAviso] = useState("");
   const [forzar, setForzar] = useState(false);
   // Modelos que ofrece el servicio elegido (para elegir de una lista).
-  const [modelos, setModelos] = useState<{ lista: string[]; ollama: boolean; error: string; cargando: boolean }>({
+  const [modelos, setModelos] = useState<{
+    lista: string[];
+    ollama: boolean;
+    error: string;
+    cargando: boolean;
+    ocultos?: number;
+  }>({
     lista: [],
     ollama: false,
     error: "",
     cargando: false,
   });
+  // Disponibilidad real de cada modelo (¿existe y esta clave puede usarlo hoy?).
+  const [disp, setDisp] = useState<Record<string, Disponibilidad | "…">>({});
   const [manual, setManual] = useState(false);
   const [verif, setVerif] = useState<(Tarea & { modelo: string }) | null>(null);
   const [descarga, setDescarga] = useState<(Tarea & { modelo: string }) | null>(null);
   const vivo = useRef(true);
-  useEffect(() => () => void (vivo.current = false), []);
+  // En React StrictMode (desarrollo) el efecto se monta, desmonta y vuelve a montar:
+  // hay que volver a marcarlo vivo al montar, o toda verificación se "cancelaba".
+  useEffect(() => {
+    vivo.current = true;
+    return () => {
+      vivo.current = false;
+    };
+  }, []);
 
   async function cargar() {
     const [c, p, h] = await Promise.all([api.llmConfig(), api.llmProveedores(), api.llmHistorial()]);
@@ -129,6 +144,20 @@ export default function MotorIA() {
   }, [habilitado]);
 
   const preset = useMemo(() => presets.find((p) => p.nombre === form.proveedor), [presets, form.proveedor]);
+  const modeloElegido = (form.modelo.trim() || preset?.modelo || "").trim();
+  const hayClave = !!preset && (!preset.requiere_api_key || preset.clave_en_servidor || !!form.api_key.trim());
+  const dispElegido = modeloElegido ? disp[modeloElegido] : undefined;
+  const defectoNoListado =
+    !!preset?.modelo && modelos.lista.length > 0 && !modelos.ollama && !modelos.lista.includes(preset.modelo);
+
+  // Se comprueba solo el modelo elegido (una llamada mínima, sin documentos).
+  useEffect(() => {
+    if (!habilitado || !preset || !hayClave || !modeloElegido || modeloElegido in disp) return;
+    const t = setTimeout(() => comprobarDisponibilidad([modeloElegido]), 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habilitado, preset?.nombre, hayClave, modeloElegido, form.base_url, form.api_key]);
+
   const efectiva: Efectiva | null = cfg?.efectiva || null;
   const puedeEditar = !!cfg?.puede_editar && !!cfg?.migracion_aplicada;
 
@@ -146,6 +175,7 @@ export default function MotorIA() {
     setForzar(false);
     setManual(false);
     setModelos({ lista: [], ollama: false, error: "", cargando: false });
+    setDisp({});
     const p = presets.find((x) => x.nombre === nombre);
     // Si el servidor ya tiene lo necesario (clave o servicio sin clave), se listan sus modelos de inmediato.
     if (p && (!p.requiere_api_key || p.clave_en_servidor)) cargarModelos({ ...VACIO, proveedor: nombre });
@@ -160,7 +190,13 @@ export default function MotorIA() {
         base_url: f.base_url.trim() || null,
         api_key: f.api_key.trim() || null,
       });
-      setModelos({ lista: r.modelos || [], ollama: !!r.ollama, error: r.error || "", cargando: false });
+      setModelos({
+        lista: r.modelos || [],
+        ollama: !!r.ollama,
+        error: r.error || "",
+        cargando: false,
+        ocultos: r.ocultos || 0,
+      });
       if ((r.modelos || []).length === 0) setManual(true);
     } catch (e) {
       setModelos({ lista: [], ollama: false, error: mensajeError(e), cargando: false });
@@ -169,6 +205,29 @@ export default function MotorIA() {
   }
 
   // Sigue una tarea en segundo plano (verificación o descarga) hasta que termine.
+  async function comprobarDisponibilidad(lista: string[], f = form) {
+    const pendientes = lista.filter((m) => m && !(m in disp));
+    if (!f.proveedor || pendientes.length === 0) return;
+    setDisp((d) => ({ ...d, ...Object.fromEntries(pendientes.map((m) => [m, "…" as const])) }));
+    try {
+      const r = await api.llmDisponibilidad({
+        proveedor: f.proveedor,
+        base_url: f.base_url.trim() || null,
+        api_key: f.api_key.trim() || null,
+        modelos: pendientes.slice(0, 12),
+      });
+      const nuevos: Record<string, Disponibilidad> = {};
+      for (const x of r.resultados || []) nuevos[x.modelo] = x;
+      setDisp((d) => ({ ...d, ...nuevos }));
+    } catch (e) {
+      const err = mensajeError(e);
+      setDisp((d) => ({
+        ...d,
+        ...Object.fromEntries(pendientes.map((m) => [m, { modelo: m, estado: "error", detalle: err }])),
+      }));
+    }
+  }
+
   async function seguir(id: string, alAvanzar: (t: Tarea) => void): Promise<Tarea> {
     for (;;) {
       await sleep(1500);
@@ -526,6 +585,7 @@ export default function MotorIA() {
                       <option value="">{preset.modelo ? `Por defecto (${preset.modelo})` : "Elegir…"}</option>
                       {modelos.lista.map((m) => (
                         <option key={m} value={m}>
+                          {marca(disp[m])}
                           {m}
                         </option>
                       ))}
@@ -547,8 +607,21 @@ export default function MotorIA() {
                         <>Consultando los modelos del servicio…</>
                       ) : modelos.lista.length > 0 ? (
                         <>
-                          {modelos.lista.length} modelos disponibles en el servicio
-                          {modelos.ollama ? " (ya descargados en Ollama)" : ""}.{" "}
+                          {modelos.lista.length} modelos de texto en el servicio
+                          {modelos.ollama ? " (ya descargados en Ollama)" : ""}
+                          {modelos.ocultos ? ` (se ocultaron ${modelos.ocultos} de imagen, audio o embeddings)` : ""}.{" "}
+                          {!modelos.ollama && (
+                            <>
+                              <button
+                                className="linkbtn"
+                                onClick={() => comprobarDisponibilidad(modelos.lista.slice(0, 12))}
+                              >
+                                Comprobar disponibilidad
+                                {modelos.lista.length > 12 ? " (primeros 12)" : ""}
+                              </button>
+                              {" · "}
+                            </>
+                          )}
                           {manual && (
                             <>
                               <button className="linkbtn" onClick={() => setManual(false)}>
@@ -569,6 +642,13 @@ export default function MotorIA() {
                         </button>
                       )}
                     </span>
+                  )}
+                  {dispElegido && <EstadoModelo modelo={modeloElegido} d={dispElegido} />}
+                  {defectoNoListado && (
+                    <div className="alert alert--warn" style={{ marginTop: 6 }}>
+                      El modelo por defecto <span className="mono">{preset?.modelo}</span> no aparece en la lista del
+                      servicio: puede haber sido retirado. Elija otro de la lista.
+                    </div>
                   )}
                   {puedeDescargar && (
                     <button
@@ -967,6 +1047,32 @@ function PanelDescarga({ d, onCerrar }: { d: Tarea & { modelo: string }; onCerra
           <Icon name="x" />
         </button>
       )}
+    </div>
+  );
+}
+
+type Disponibilidad = { modelo: string; estado: string; detalle: string; tecnico?: string; latencia_ms?: number };
+
+function marca(d: Disponibilidad | "…" | undefined): string {
+  if (!d || d === "…") return "";
+  if (d.estado === "disponible") return "✓ ";
+  if (d.estado === "sin_cuota") return "⏳ ";
+  return "✗ ";
+}
+
+function EstadoModelo({ modelo, d }: { modelo: string; d: Disponibilidad | "…" }) {
+  if (d === "…")
+    return <span className="hint">Comprobando si «{modelo}» está disponible con esta clave…</span>;
+  const ok = d.estado === "disponible";
+  const espera = d.estado === "sin_cuota";
+  return (
+    <div
+      className={"alert " + (ok ? "alert--ok" : espera ? "alert--warn" : "alert--err")}
+      style={{ marginTop: 6 }}
+      title={d.tecnico || ""}
+    >
+      <strong>{ok ? "✓ Disponible" : espera ? "⏳ Sin cuota ahora" : "✗ No disponible"}</strong> —{" "}
+      <span className="mono">{modelo}</span>: {d.detalle}
     </div>
   );
 }
