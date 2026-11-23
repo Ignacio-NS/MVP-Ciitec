@@ -118,6 +118,11 @@ export const api = {
   // Pruebas QA de motores de IA (solo lectura)
   qaCorridas: () => request("/qa/corridas"),
   qaCorrida: (id: string) => request(`/qa/corridas/${encodeURIComponent(id)}`),
+  qaExportar: (id: string, formato: string): Promise<Blob> =>
+    request(`/qa/corridas/${encodeURIComponent(id)}/exportar`, {
+      method: "POST",
+      body: JSON.stringify({ formato }),
+    }) as Promise<Blob>,
 };
 
 /** Mensaje legible de un error de la API ({"detail": "..."} de FastAPI). */

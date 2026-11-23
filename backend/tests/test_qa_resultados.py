@@ -93,3 +93,30 @@ def test_api_permisos_y_404(carpeta):
     r = client.get("/qa/corridas/deepseek-chat-qa-nov__corrida2", headers=_h("Auditor"))
     assert r.status_code == 200 and r.json()["sitrep"]["resumen_ejecutivo"][0].startswith("Fuerza")
     assert client.get("/qa/corridas/nada__corrida9", headers=_h("Auditor")).status_code == 404
+
+
+def test_exportar_usa_el_exportador_institucional(carpeta, monkeypatch):
+    from app.api import qa as api_qa
+
+    llamadas = []
+
+    def falso(contenido, formato, titulo, fecha):
+        llamadas.append((contenido["resumen_ejecutivo"][0], formato, titulo, fecha.year))
+        return b"%PDF-falso", "application/pdf", "pdf"
+
+    monkeypatch.setattr(api_qa.exportacion, "render", falso)
+    r = client.post("/qa/corridas/deepseek-chat-qa-nov__corrida1/exportar", json={"formato": "PDF"},
+                    headers=_h("Auditor"))
+    assert r.status_code == 200 and r.content == b"%PDF-falso"
+    assert 'QA_deepseek-chat-qa-nov__corrida1.pdf' in r.headers["content-disposition"]
+    assert llamadas == [("Fuerza de 43.720 efectivos", "PDF", "SITREP de prueba - DeepSeek chat - corrida 1", 2026)]
+
+
+def test_exportar_texto_real_y_permisos(carpeta):
+    r = client.post("/qa/corridas/deepseek-chat-qa-nov__corrida2/exportar", json={"formato": "TEXTO"},
+                    headers=_h("Administrador del Sistema"))
+    assert r.status_code == 200 and "Fuerza de 43.720 efectivos" in r.text
+    assert client.post("/qa/corridas/deepseek-chat-qa-nov__corrida2/exportar", json={"formato": "PDF"},
+                       headers=_h("Oficial de Operaciones")).status_code == 403
+    assert client.post("/qa/corridas/nada__corrida1/exportar", json={"formato": "PDF"},
+                       headers=_h("Auditor")).status_code == 404

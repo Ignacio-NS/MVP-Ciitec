@@ -283,6 +283,27 @@ export function PruebaQADetalle() {
   const { id = "" } = useParams();
   const [d, setD] = useState<any>(null);
   const [error, setError] = useState("");
+  const [bajando, setBajando] = useState("");
+
+  // El SITREP de la corrida con la plantilla institucional (mismo exportador que un briefing).
+  async function exportar(formato: string) {
+    const ext = formato === "PDF" ? "pdf" : formato === "WORD" ? "docx" : "txt";
+    setBajando(formato);
+    setError("");
+    try {
+      const blob = await api.qaExportar(id, formato);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `QA_${id}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(mensajeError(e));
+    } finally {
+      setBajando("");
+    }
+  }
 
   useEffect(() => {
     api
@@ -320,6 +341,22 @@ export function PruebaQADetalle() {
                 {d.proveedor} · {d.modelo} · síntesis {d.modo_sintesis || "—"}
               </p>
             </div>
+            {d.sitrep && (
+              <div className="row gap2">
+                <button className="btn btn--secondary" onClick={() => exportar("PDF")} disabled={!!bajando}>
+                  <Icon name="file-text" />
+                  {bajando === "PDF" ? "Generando PDF…" : "PDF"}
+                </button>
+                <button className="btn btn--secondary" onClick={() => exportar("WORD")} disabled={!!bajando}>
+                  <Icon name="file" />
+                  Word
+                </button>
+                <button className="btn btn--secondary" onClick={() => exportar("TEXTO")} disabled={!!bajando}>
+                  <Icon name="text-lines" />
+                  Texto
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="qa-kpis">
