@@ -1,0 +1,327 @@
+{
+ "fases": {
+  "extraccion": {
+   "tiempo_s": 0.3,
+   "errores_doc": {
+    "05_parte_meteorologico.txt": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context",
+    "07_correo_asuntos_criticos.eml": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context",
+    "03_operacionalidad_logistica.xlsx": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context",
+    "04_operaciones_relevos.xlsx": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context",
+    "08_bitacora_turno_cog.log": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context",
+    "02_dotacion_personal.xlsx": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context",
+    "09_operacionalidad.csv": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context"
+   },
+   "hechos_por_doc": {
+    "02_dotacion_personal.xlsx": 0,
+    "03_operacionalidad_logistica.xlsx": 0,
+    "04_operaciones_relevos.xlsx": 0,
+    "05_parte_meteorologico.txt": 0,
+    "07_correo_asuntos_criticos.eml": 0,
+    "08_bitacora_turno_cog.log": 0,
+    "09_operacionalidad.csv": 0
+   },
+   "llamadas": 7,
+   "reintentos": 0,
+   "fallas": 7,
+   "errores": [
+    "BadRequestError"
+   ],
+   "truncadas": 0,
+   "tokens_in": 0,
+   "tokens_out": 0,
+   "latencia_llamada_prom_s": 0.16
+  },
+  "contradicciones": {
+   "tiempo_s": 0.0,
+   "detectadas": 0,
+   "error": null,
+   "llamadas": 0,
+   "reintentos": 0,
+   "fallas": 0,
+   "errores": [],
+   "truncadas": 0,
+   "tokens_in": 0,
+   "tokens_out": 0,
+   "latencia_llamada_prom_s": null
+  },
+  "sintesis": {
+   "tiempo_s": 0.1,
+   "error": "LLMError: Error no recuperable de groq/qwen/qwen3.8-27b: Error code: 400 - {'error': {'message': '`max_tokens` must be less than or equal to `16384`, the maximum value for `max_tokens` is less than the `context_window` for this model', 'type': 'invalid_request_error', 'param': 'max_tokens'}}",
+   "hechos_enviados": 0,
+   "contexto_chars": 6333,
+   "llamadas": 2,
+   "reintentos": 0,
+   "fallas": 2,
+   "errores": [
+    "BadRequestError"
+   ],
+   "truncadas": 0,
+   "tokens_in": 0,
+   "tokens_out": 0,
+   "latencia_llamada_prom_s": 0.07
+  }
+ },
+ "tiempo_total_s": 0.4,
+ "sitrep_ok": false,
+ "calidad": {
+  "aciertos": 0,
+  "total": 40,
+  "pct": 0.0,
+  "por_seccion": {
+   "PERSONAL": "0/11",
+   "LOGISTICA": "0/4",
+   "OPERACIONES": "0/15",
+   "INTELIGENCIA": "0/4",
+   "EJECUTIVO": "0/6"
+  },
+  "detalle": [
+   {
+    "seccion": "PERSONAL",
+    "dato": "OF 2840",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "SOF 9120",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "ECP 18760",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Total institucional 43720",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "SLC total 4200",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Macrozona Norte fuerza 9800",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Fuerza de catástrofe 1500",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Catástrofe faltan 60",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "UFEC 12",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "BRIFE 4",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "PARME 6",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "Total material 1740",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "NOP total 199",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "7 unidades en operacionalidad",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "JDN Biobío NOP 38",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 operaciones de catástrofe",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Concepción: 120 efectivos",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 relevos norte",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 relevos sur",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Antártica dotación 24",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "UNFICYP 14 efectivos",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Guardián soberano 3 JAF",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Tarapacá planificado 5.200",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Unidades en terreno 6",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Fuerza en terreno 540",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "10 UAC en traslados",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "III DE: 8 unidades",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue MZN 14",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue MZS 12",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue Antártica 1",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "3 alertas vigentes",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Alerta roja Biobío",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Análisis meteo: sistema frontal",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Proyección 48 h: 30-50 mm o Ruta 5",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Resumen de 5 a 10 bullets",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "3 o más asuntos críticos",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: aluvión Calama",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: control fronterizo Putre",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: sistema frontal / Biobío",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Situación con panorama",
+    "ok": false
+   }
+  ],
+  "hechos": 0,
+  "hechos_con_cita": 0,
+  "citas_fieles": 0,
+  "eventos_clave": [
+   {
+    "evento": "Incendio forestal Florida / 120 efectivos",
+    "ok": false
+   },
+   {
+    "evento": "Evacuación Calama / 80 personas",
+    "ok": false
+   },
+   {
+    "evento": "Tránsito irregular Putre",
+    "ok": false
+   },
+   {
+    "evento": "Ruta 5 Sur habilitada",
+    "ok": false
+   },
+   {
+    "evento": "Alerta roja Biobío",
+    "ok": false
+   }
+  ],
+  "eventos_clave_ok": 0,
+  "trazas_validas": 0,
+  "avisos": [],
+  "modo_sintesis": null,
+  "bullets": 0
+ },
+ "tokens_in": 0,
+ "tokens_out": 0,
+ "llamadas": 9,
+ "sitrep": null,
+ "hechos": [],
+ "contradicciones": [],
+ "etiqueta": "Groq Qwen3.8 27B",
+ "proveedor": "groq",
+ "modelo": "qwen/qwen3.8-27b",
+ "grupo": "nube",
+ "cambios": {},
+ "corrida": 2,
+ "inicio": "2026-10-18T21:25:52.046675+00:00",
+ "prueba_ms": 532,
+ "max_output_tokens": 32768,
+ "context_tokens": 0,
+ "sintesis_modo": "auto"
+}

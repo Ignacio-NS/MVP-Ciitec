@@ -1,0 +1,102 @@
+[
+ {
+  "etiqueta": "DeepSeek chat (config actual)",
+  "modelo": "deepseek-chat",
+  "corridas": 3,
+  "tiempo_prom": 25.1,
+  "tiempo_min": 21.6,
+  "tiempo_max": 28.8,
+  "calidad": 100.0,
+  "cifras_prom": 194,
+  "exactitud": 100.0,
+  "no_en_fuente": [],
+  "costo_clp": 15.9,
+  "tokens_in": 16102,
+  "tokens_out": 9474,
+  "secciones": {
+   "PERSONAL": "11/11",
+   "LOGISTICA": "4/4",
+   "OPERACIONES": "15/15",
+   "INTELIGENCIA": "4/4",
+   "EJECUTIVO": "6/6"
+  },
+  "modo": "completa",
+  "avisos": []
+ },
+ {
+  "etiqueta": "DeepSeek Flash sin razonamiento",
+  "modelo": "deepseek-flash",
+  "corridas": 3,
+  "tiempo_prom": 27.1,
+  "tiempo_min": 25.4,
+  "tiempo_max": 30.5,
+  "calidad": 100.0,
+  "cifras_prom": 200,
+  "exactitud": 99.7,
+  "no_en_fuente": [
+   "1.360"
+  ],
+  "costo_clp": 16.9,
+  "tokens_in": 16224,
+  "tokens_out": 10252,
+  "secciones": {
+   "PERSONAL": "11/11",
+   "LOGISTICA": "4/4",
+   "OPERACIONES": "15/15",
+   "INTELIGENCIA": "4/4",
+   "EJECUTIVO": "6/6"
+  },
+  "modo": "completa",
+  "avisos": []
+ },
+ {
+  "etiqueta": "Gemini 3.5 Flash-Lite",
+  "modelo": "gemini-3.5-flash-lite",
+  "corridas": 3,
+  "tiempo_prom": 23.5,
+  "tiempo_min": 22.2,
+  "tiempo_max": 25.1,
+  "calidad": 100.0,
+  "cifras_prom": 150,
+  "exactitud": 100.0,
+  "no_en_fuente": [],
+  "costo_clp": 29.1,
+  "tokens_in": 15607,
+  "tokens_out": 9975,
+  "secciones": {
+   "PERSONAL": "11/11",
+   "LOGISTICA": "4/4",
+   "OPERACIONES": "15/15",
+   "INTELIGENCIA": "4/4",
+   "EJECUTIVO": "6/6"
+  },
+  "modo": "completa",
+  "avisos": []
+ },
+ {
+  "etiqueta": "Gemini 3.8 Flash",
+  "modelo": "gemini-3.8-flash",
+  "corridas": 3,
+  "tiempo_prom": 127.3,
+  "tiempo_min": 122.4,
+  "tiempo_max": 134.6,
+  "calidad": 100.0,
+  "cifras_prom": 166,
+  "exactitud": 99.6,
+  "no_en_fuente": [
+   "72"
+  ],
+  "costo_clp": 41.5,
+  "tokens_in": 13199,
+  "tokens_out": 8603,
+  "secciones": {
+   "PERSONAL": "11/11",
+   "LOGISTICA": "4/4",
+   "OPERACIONES": "15/15",
+   "INTELIGENCIA": "4/4",
+   "EJECUTIVO": "6/6"
+  },
+  "modo": "completa",
+  "avisos": []
+ }
+]

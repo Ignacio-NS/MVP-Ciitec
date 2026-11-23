@@ -1,0 +1,566 @@
+{
+ "fases": {
+  "extraccion": {
+   "tiempo_s": 29.6,
+   "errores_doc": {
+    "09_operacionalidad.csv": "LLMError: LLM (gemini/gemini-3.8-flash) falló tras 4 intentos: Error code: 429 - [{'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more inform"
+   },
+   "hechos_por_doc": {
+    "02_dotacion_personal.xlsx": 0,
+    "03_operacionalidad_logistica.xlsx": 0,
+    "04_operaciones_relevos.xlsx": 8,
+    "05_parte_meteorologico.txt": 3,
+    "07_correo_asuntos_criticos.eml": 3,
+    "08_bitacora_turno_cog.log": 8,
+    "09_operacionalidad.csv": 0
+   },
+   "llamadas": 10,
+   "reintentos": 3,
+   "fallas": 4,
+   "errores": [
+    "RateLimitError"
+   ],
+   "truncadas": 0,
+   "tokens_in": 4048,
+   "tokens_out": 3366,
+   "latencia_llamada_prom_s": 10.36
+  },
+  "contradicciones": {
+   "tiempo_s": 7.9,
+   "detectadas": 0,
+   "error": "LLMError: LLM (gemini/gemini-3.8-flash) falló tras 4 intentos: Error code: 429 - [{'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more inform",
+   "llamadas": 4,
+   "reintentos": 3,
+   "fallas": 4,
+   "errores": [
+    "RateLimitError"
+   ],
+   "truncadas": 0,
+   "tokens_in": 0,
+   "tokens_out": 0,
+   "latencia_llamada_prom_s": 1.98
+  },
+  "sintesis": {
+   "tiempo_s": 16.7,
+   "error": "LLMError: LLM (gemini/gemini-3.8-flash) falló tras 4 intentos: Error code: 429 - [{'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your cur",
+   "hechos_enviados": 22,
+   "contexto_chars": 6333,
+   "llamadas": 8,
+   "reintentos": 6,
+   "fallas": 8,
+   "errores": [
+    "RateLimitError"
+   ],
+   "truncadas": 0,
+   "tokens_in": 0,
+   "tokens_out": 0,
+   "latencia_llamada_prom_s": 2.09
+  }
+ },
+ "tiempo_total_s": 54.2,
+ "sitrep_ok": false,
+ "calidad": {
+  "aciertos": 0,
+  "total": 40,
+  "pct": 0.0,
+  "por_seccion": {
+   "PERSONAL": "0/11",
+   "LOGISTICA": "0/4",
+   "OPERACIONES": "0/15",
+   "INTELIGENCIA": "0/4",
+   "EJECUTIVO": "0/6"
+  },
+  "detalle": [
+   {
+    "seccion": "PERSONAL",
+    "dato": "OF 2840",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "SOF 9120",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "ECP 18760",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Total institucional 43720",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "SLC total 4200",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Macrozona Norte fuerza 9800",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Fuerza de catástrofe 1500",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Catástrofe faltan 60",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "UFEC 12",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "BRIFE 4",
+    "ok": false
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "PARME 6",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "Total material 1740",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "NOP total 199",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "7 unidades en operacionalidad",
+    "ok": false
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "JDN Biobío NOP 38",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 operaciones de catástrofe",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Concepción: 120 efectivos",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 relevos norte",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 relevos sur",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Antártica dotación 24",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "UNFICYP 14 efectivos",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Guardián soberano 3 JAF",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Tarapacá planificado 5.200",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Unidades en terreno 6",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Fuerza en terreno 540",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "10 UAC en traslados",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "III DE: 8 unidades",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue MZN 14",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue MZS 12",
+    "ok": false
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue Antártica 1",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "3 alertas vigentes",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Alerta roja Biobío",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Análisis meteo: sistema frontal",
+    "ok": false
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Proyección 48 h: 30-50 mm o Ruta 5",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Resumen de 5 a 10 bullets",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "3 o más asuntos críticos",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: aluvión Calama",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: control fronterizo Putre",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: sistema frontal / Biobío",
+    "ok": false
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Situación con panorama",
+    "ok": false
+   }
+  ],
+  "hechos": 22,
+  "hechos_con_cita": 22,
+  "citas_fieles": 22,
+  "eventos_clave": [
+   {
+    "evento": "Incendio forestal Florida / 120 efectivos",
+    "ok": true
+   },
+   {
+    "evento": "Evacuación Calama / 80 personas",
+    "ok": true
+   },
+   {
+    "evento": "Tránsito irregular Putre",
+    "ok": true
+   },
+   {
+    "evento": "Ruta 5 Sur habilitada",
+    "ok": true
+   },
+   {
+    "evento": "Alerta roja Biobío",
+    "ok": true
+   }
+  ],
+  "eventos_clave_ok": 5,
+  "trazas_validas": 0,
+  "avisos": [],
+  "modo_sintesis": null,
+  "bullets": 0
+ },
+ "tokens_in": 4048,
+ "tokens_out": 3366,
+ "llamadas": 22,
+ "sitrep": null,
+ "hechos": [
+  {
+   "evento": "Apoyo incendio forestal",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Concepción",
+   "responsable": "JDN Biobío (BRIFE Concepción)",
+   "impacto": "Empleo de 120 efectivos",
+   "estado": "EN_CURSO",
+   "texto_origen": "120\tApoyo incendio forestal\tJDN Biobío\tConcepción\t22-06-2026",
+   "id": "h0",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Evacuación por aluvión",
+   "ocurrido_en": "2026-06-21",
+   "ubicacion": "Calama",
+   "responsable": "JAF Antofagasta (UFEC Calama)",
+   "impacto": "Empleo de 60 efectivos",
+   "estado": "EN_CURSO",
+   "texto_origen": "60\tEvacuación por aluvión\tJAF Antofagasta\tCalama\t21-06-2026",
+   "id": "h1",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Ejercicio combinado",
+   "ocurrido_en": "2026-06-20",
+   "ubicacion": "Pampa Chaca",
+   "responsable": "I División (RR N°1)",
+   "impacto": "Fuerza de 250 efectivos en terreno",
+   "estado": "EN_CURSO",
+   "texto_origen": "Ejercicio combinado\tI División\tRR N°1\t20 al 28-06-2026\tPampa Chaca\t250",
+   "id": "h2",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Patrullaje fronterizo",
+   "ocurrido_en": "",
+   "ubicacion": "Putre",
+   "responsable": "FT Andes (GFE Putre)",
+   "impacto": "Fuerza de 30 efectivos en terreno",
+   "estado": "EN_CURSO",
+   "texto_origen": "Patrullaje fronterizo\tFT Andes\tGFE Putre\tpermanente\tPutre\t30",
+   "id": "h3",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Apoyo albergues",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Temuco",
+   "responsable": "JDN Araucanía (UFEC Temuco)",
+   "impacto": "Fuerza de 56 efectivos en terreno",
+   "estado": "EN_CURSO",
+   "texto_origen": "Apoyo albergues\tJDN Araucanía\tUFEC Temuco\tdesde 22-06-2026\tTemuco\t56",
+   "id": "h4",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Dotación estival",
+   "ocurrido_en": "",
+   "ubicacion": "Antártica",
+   "responsable": "BAE O'Higgins",
+   "impacto": "Fuerza de 24 efectivos en terreno",
+   "estado": "EN_CURSO",
+   "texto_origen": "Dotación estival\tBAE O'Higgins\tBAE\tpermanente\tAntártica\t24",
+   "id": "h5",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Operación de paz UNFICYP",
+   "ocurrido_en": "",
+   "ubicacion": "Chipre",
+   "responsable": "",
+   "impacto": "14 efectivos desplegados (repliegue programado 12-2026)",
+   "estado": "EN_CURSO",
+   "texto_origen": "UNFICYP\t14\tChipre\t12-2026",
+   "id": "h6",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Operación de paz UNTSO",
+   "ocurrido_en": "",
+   "ubicacion": "Medio Oriente",
+   "responsable": "",
+   "impacto": "4 efectivos desplegados (repliegue programado 02-2027)",
+   "estado": "EN_CURSO",
+   "texto_origen": "UNTSO\t4\tMedio Oriente\t02-2027",
+   "id": "h7",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Vigencia de Alerta Roja por sistema frontal",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Región del Biobío",
+   "responsable": "JDN Biobío",
+   "impacto": "Probable empleo de fuerza de respuesta de catástrofe en próximas 24 h",
+   "estado": "EN_CURSO",
+   "texto_origen": "ALERTA ROJA por sistema frontal — Región del Biobío — Unidad asociada: JDN Biobío — Apreciación: probable empleo de fuerza de respuesta de catástrofe en próximas 24 h.",
+   "id": "h8",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Vigencia de Alerta Amarilla por marejadas",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Litoral de Araucanía",
+   "responsable": "JDN Araucanía",
+   "impacto": "Refuerzo preventivo de borde costero",
+   "estado": "EN_CURSO",
+   "texto_origen": "ALERTA AMARILLA por marejadas — litoral de Araucanía — Unidad asociada: JDN Araucanía — Apreciación: refuerzo preventivo de borde costero.",
+   "id": "h9",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Vigencia de Alerta Amarilla por heladas",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Altiplano de Arica y Parinacota",
+   "responsable": "FT Andes",
+   "impacto": "",
+   "estado": "EN_CURSO",
+   "texto_origen": "ALERTA AMARILLA por heladas — altiplano de Arica y Parinacota — Unidad asociada: FT Andes.",
+   "id": "h10",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Apoyo a incendio forestal y preparación de empleo de fuerza de respuesta de catástrofe por sistema frontal",
+   "ocurrido_en": "2026-06-22T22:20:00+00:00",
+   "ubicacion": "macrozona Sur / Biobío",
+   "responsable": "Comandante JDN Biobío",
+   "impacto": "120 efectivos desplegados; 1.500 efectivos disponibles a nivel institucional",
+   "estado": "EN_CURSO",
+   "texto_origen": "Sistema frontal en macrozona Sur. La JDN Biobío mantiene 120 efectivos en apoyo a\n   incendio forestal y prepara empleo de la fuerza de respuesta de catástrofe (1.500\n   efectivos disponibles a nivel institucional). Responsable: Comandante JDN Biobío.",
+   "id": "h11",
+   "fuente": "07_correo_asuntos_criticos.eml"
+  },
+  {
+   "evento": "Evacuación por aluvión y solicitud de refuerzo logístico",
+   "ocurrido_en": "2026-06-22T22:20:00+00:00",
+   "ubicacion": "Calama",
+   "responsable": "Comandante JAF Antofagasta",
+   "impacto": "80 personas evacuadas; requerimiento de 2 camiones aljibe",
+   "estado": "EN_CURSO",
+   "texto_origen": "Evacuación por aluvión en Calama. 80 personas evacuadas; la JAF Antofagasta solicita\n   refuerzo de 2 camiones aljibe. Responsable: Comandante JAF Antofagasta.",
+   "id": "h12",
+   "fuente": "07_correo_asuntos_criticos.eml"
+  },
+  {
+   "evento": "Aumento de tránsito irregular y solicitud de refuerzo de personal para control fronterizo",
+   "ocurrido_en": "2026-06-22T22:20:00+00:00",
+   "ubicacion": "Putre",
+   "responsable": "FT Andes",
+   "impacto": "Solicitud de autorización para desplegar 30 efectivos adicionales",
+   "estado": "ABIERTO",
+   "texto_origen": "Control fronterizo en Putre. Aumento de tránsito irregular; se solicita autorización\n   para reforzar con 30 efectivos adicionales de la FT Andes.",
+   "id": "h13",
+   "fuente": "07_correo_asuntos_criticos.eml"
+  },
+  {
+   "evento": "Inicio de turno y relevo de guardia",
+   "ocurrido_en": "2026-06-22T06:00:00",
+   "ubicacion": "",
+   "responsable": "COG",
+   "impacto": "Fuerza en terreno: 540 (6 unidades, 6 lugares activos)",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 06:00  COG  Inicio de turno. Sin novedad en el relevo. Fuerza en terreno: 540 (6 unidades, 6 lugares activos).",
+   "id": "h14",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Activación por incendio forestal y despliegue de personal",
+   "ocurrido_en": "2026-06-22T07:42:00",
+   "ubicacion": "sector Florida",
+   "responsable": "JDN-BIOBIO",
+   "impacto": "Despliegue 120 efectivos",
+   "estado": "EN_CURSO",
+   "texto_origen": "2026-06-22 07:42  JDN-BIOBIO  Activación por incendio forestal sector Florida. Despliegue 120 efectivos.",
+   "id": "h15",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Evacuación preventiva",
+   "ocurrido_en": "2026-06-22T09:15:00",
+   "ubicacion": "quebrada Calama",
+   "responsable": "JAF-ANTOF",
+   "impacto": "80 personas en albergue",
+   "estado": "EN_CURSO",
+   "texto_origen": "2026-06-22 09:15  JAF-ANTOF  Continúa evacuación preventiva quebrada Calama. 80 personas en albergue.",
+   "id": "h16",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Detección de personas en tránsito irregular y derivación a autoridad policial",
+   "ocurrido_en": "2026-06-22T10:30:00",
+   "ubicacion": "sector Putre",
+   "responsable": "FT-ANDES",
+   "impacto": "6 personas en tránsito irregular derivadas a PDI",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 10:30  FT-ANDES  Detección de 6 personas en tránsito irregular sector Putre. Derivadas a PDI.",
+   "id": "h17",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Emisión de parte parcial al EMG por intensificación meteorológica",
+   "ocurrido_en": "2026-06-22T12:00:00",
+   "ubicacion": "sur",
+   "responsable": "COG",
+   "impacto": "Sistema frontal sur en intensificación",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 12:00  COG  Parte parcial al EMG. Sistema frontal sur en intensificación.",
+   "id": "h18",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Habilitación de vía tras despeje de deslizamiento",
+   "ocurrido_en": "2026-06-22T14:20:00",
+   "ubicacion": "Ruta 5 Sur",
+   "responsable": "JDN-ARAUC",
+   "impacto": "Ruta 5 Sur habilitada",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 14:20  JDN-ARAUC  Ruta 5 Sur habilitada tras despeje de deslizamiento. Estado: CERRADO.",
+   "id": "h19",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Detección adicional de personas en tránsito irregular y derivación a autoridad policial",
+   "ocurrido_en": "2026-06-22T16:05:00",
+   "ubicacion": "",
+   "responsable": "FT-ANDES",
+   "impacto": "8 personas derivadas a PDI (total jornada: 14)",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 16:05  FT-ANDES  Detección adicional de 8 personas. Total jornada: 14. Derivadas a PDI.",
+   "id": "h20",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Cierre de parte diario",
+   "ocurrido_en": "2026-06-22T17:50:00",
+   "ubicacion": "Biobío",
+   "responsable": "COG",
+   "impacto": "Sin lesionados propios; alerta roja Biobío vigente",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 17:50  COG  Cierre de parte diario. Sin lesionados propios. Alerta roja Biobío vigente.",
+   "id": "h21",
+   "fuente": "08_bitacora_turno_cog.log"
+  }
+ ],
+ "contradicciones": [],
+ "etiqueta": "Gemini 3.8 Flash",
+ "proveedor": "gemini",
+ "modelo": "gemini-3.8-flash",
+ "grupo": "nube",
+ "cambios": {},
+ "corrida": 1,
+ "inicio": "2026-10-18T20:48:59.314173+00:00",
+ "prueba_ms": 3459,
+ "max_output_tokens": 32768,
+ "context_tokens": 0,
+ "sintesis_modo": "auto"
+}
