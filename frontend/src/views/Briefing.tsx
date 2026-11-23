@@ -51,7 +51,7 @@ function impactoStyle(imp?: string): React.CSSProperties {
 
 // Renderiza una sección institucional (dict libre del LLM) de forma genérica:
 // primitivas como métricas de tablero, listas/objetos como sub-bloques.
-function SeccionInstitucional({
+export function SeccionInstitucional({
   titulo,
   icon,
   data,

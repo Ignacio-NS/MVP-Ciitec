@@ -41,3 +41,11 @@ Thumbs.db
 
 # Archivos de bloqueo temporales de Word/PowerPoint al abrir un .docx/.pptx
 ~$*
+
+# Pruebas QA de motores de IA: se versionan bench.py, los .bat y resultados/
+# (los lee la pantalla "Pruebas QA"); la copia de la app y lo local, no.
+benchmark_llm/app/
+benchmark_llm/_to_delete/
+benchmark_llm/*.log
+benchmark_llm/gpu.txt
+benchmark_llm/disco.txt

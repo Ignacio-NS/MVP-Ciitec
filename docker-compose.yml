@@ -78,6 +78,9 @@ services:
     # Permite llegar a un modelo local (Ollama/vLLM) corriendo en el mismo servidor Linux
     # vía http://host.docker.internal:<puerto> (en Docker Desktop ya existe).
     extra_hosts: ["host.docker.internal:host-gateway"]
+    # Resultados de las pruebas de QA de motores de IA (pantalla "Pruebas QA"), solo lectura.
+    volumes:
+      - ./benchmark_llm/resultados:/qa_resultados:ro
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }

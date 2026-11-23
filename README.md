@@ -152,3 +152,7 @@ Cada llamada deja una línea `llm_call` en `docker compose logs worker` con prov
 modelo, operación, latencia y tokens (nunca el contenido). Cada versión del SITREP
 guarda qué modelo la redactó (`briefing_versiones.modelo_llm`) y el Robot QA lo lee
 de `GET /api/info` para su manifiesto.
+
+## Pruebas QA de motores de IA
+
+`benchmark_llm/correr_qa_motores.bat` genera el mismo SITREP con cada motor de IA (claves en `benchmark_llm/.env`, que Git ignora) y guarda cada corrida en `benchmark_llm/resultados/`. La API monta esa carpeta solo lectura y la pantalla **Pruebas QA** (mismos roles que ven el Motor de IA) muestra el resumen por motor (tiempo, calidad, cifras correctas y costo estimado), cada corrida y el SITREP que generó.

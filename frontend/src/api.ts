@@ -114,6 +114,10 @@ export const api = {
   llmDescargar: (cfg: any) => request("/llm/descargar", { method: "POST", body: JSON.stringify(cfg) }),
   llmTarea: (id: string) => request(`/llm/tareas/${encodeURIComponent(id)}`),
   info: () => request("/info"),
+
+  // Pruebas QA de motores de IA (solo lectura)
+  qaCorridas: () => request("/qa/corridas"),
+  qaCorrida: (id: string) => request(`/qa/corridas/${encodeURIComponent(id)}`),
 };
 
 /** Mensaje legible de un error de la API ({"detail": "..."} de FastAPI). */

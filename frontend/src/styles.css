@@ -630,3 +630,19 @@ button.trace-id:hover{border-color:var(--accent-border);color:var(--accent);back
   margin:0;padding:11px 14px;border-left:3px solid var(--res);background:var(--res-bg);
   color:var(--text);border-radius:var(--r);font-size:var(--tx-md);line-height:1.55;
 }
+
+/* ============================================================
+   PRUEBAS QA de motores de IA
+   ============================================================ */
+.qa-bar{height:6px;border-radius:999px;background:var(--surface-3);margin-top:6px;overflow:hidden}
+.qa-bar__fill{height:100%;border-radius:999px}
+.qa-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-3)}
+@media (max-width:900px){.qa-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qa-checks{list-style:none;padding:0;margin:0;font-size:var(--tx-sm);max-height:420px;overflow:auto}
+.qa-checks li{break-inside:avoid;padding:2px 0}
+.qa-checks li.is-ok span[aria-hidden]{color:var(--pub);font-weight:700}
+.qa-checks li.is-bad{color:var(--sec)}
+.qa-zero{color:var(--sec);font-weight:700}
+.qa-contra{display:flex;flex-direction:column;gap:var(--sp-3)}
+.qa-contra__item{padding-bottom:var(--sp-3);border-bottom:1px solid var(--border);font-size:var(--tx-sm);line-height:1.5}
+.qa-contra__item:last-child{border-bottom:0;padding-bottom:0}

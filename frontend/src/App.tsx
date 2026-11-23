@@ -10,6 +10,7 @@ import Briefing from "./views/Briefing";
 import Fuente from "./views/Fuente";
 import Auditoria from "./views/Auditoria";
 import MotorIA from "./views/MotorIA";
+import PruebasQA, { PruebaQADetalle } from "./views/PruebasQA";
 
 const ROLES_AUDITORIA = ["Auditor", "Oficial de Seguridad", "Administrador del Sistema"];
 // Ver el motor de IA activo: los mismos roles; cambiarlo: solo el Administrador del Sistema.
@@ -61,6 +62,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             <NavLink to="/motor-ia" className={navCls}>
               <Icon name="bolt" />
               Motor de IA
+            </NavLink>
+          )}
+          {veMotorIA && (
+            <NavLink to="/pruebas-qa" className={navCls}>
+              <Icon name="check-circle" />
+              Pruebas QA
             </NavLink>
           )}
         </nav>
@@ -124,6 +131,8 @@ export default function App() {
       <Route path="/fuentes/:id" element={<Protected><Fuente /></Protected>} />
       <Route path="/auditoria" element={<Protected><Auditoria /></Protected>} />
       <Route path="/motor-ia" element={<Protected><MotorIA /></Protected>} />
+      <Route path="/pruebas-qa" element={<Protected><PruebasQA /></Protected>} />
+      <Route path="/pruebas-qa/:id" element={<Protected><PruebaQADetalle /></Protected>} />
       <Route path="*" element={<Navigate to="/briefings" replace />} />
     </Routes>
   );

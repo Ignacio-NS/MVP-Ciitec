@@ -117,6 +117,8 @@ class Settings(BaseSettings):
     github_token: str = ""
     github_base_url: str = "https://models.github.ai/inference"
     github_model: str = "openai/gpt-4o"
+    # Carpeta (solo lectura) con los resultados de las pruebas de QA de motores de IA.
+    qa_resultados_dir: str = "/qa_resultados"
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
     # Reglas de detección (RF-005)
