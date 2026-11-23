@@ -3,7 +3,16 @@
 $dir = Join-Path $PSScriptRoot "..\infra\nginx\certs"
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 
-$openssl = "openssl"
+$openssl = (Get-Command openssl -ErrorAction SilentlyContinue).Source
+if (-not $openssl) {
+    $gitOpenssl = "C:\Program Files\Git\usr\bin\openssl.exe"
+    if (Test-Path $gitOpenssl) {
+        $openssl = $gitOpenssl
+    } else {
+        Write-Error "No se encontro OpenSSL. Instalalo o agrega Git for Windows al PATH."
+        exit 1
+    }
+}
 & $openssl req -x509 -nodes -newkey rsa:2048 -days 825 `
   -keyout (Join-Path $dir "server.key") `
   -out (Join-Path $dir "server.crt") `
