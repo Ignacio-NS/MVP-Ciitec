@@ -83,7 +83,10 @@ _NUM_RE = re.compile(r"\d[\d.,]*\d|\d")
 
 def _formas(n: str) -> set[str]:
     n = n.strip(".,")
-    return {n, n.replace(".", ""), n.replace(".", "").replace(",", ".")}
+    formas = {n, n.replace(".", ""), n.replace(".", "").replace(",", ".")}
+    if re.fullmatch(r"\d{1,3}(,\d{3})+", n):  # miles con coma (estilo inglés): 1,440 = 1.440
+        formas.add(n.replace(",", ""))
+    return formas
 
 
 @lru_cache(maxsize=4)

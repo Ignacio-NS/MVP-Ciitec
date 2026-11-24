@@ -60,3 +60,25 @@ def test_json_valido_en_el_limite_se_acepta():
 def test_json_mal_formado_sin_truncar_se_repara():
     c = _ClienteFalso([_resp('{"resumen_ejecutivo": ["a"],}', "stop")])
     assert _provider(c)._chat_json("sys", "user")["resumen_ejecutivo"] == ["a"]
+
+
+# gpt-oss-20b (Groq, QA nov-2026) devolvió las secciones con claves rotas: 'personal",' con el
+# objeto como texto y 'personal' vacía. Antes se aceptaba un SITREP con 4 secciones vacías.
+CLAVES_ROTAS = ('{"resumen_ejecutivo": ["a"], "personal": {}, '
+                '"personal\\",": ",{\\"slc\\":{\\"clase_2006\\":\\"21\\"}}"}')
+
+
+def test_claves_rotas_se_rescatan():
+    c = _ClienteFalso([_resp(CLAVES_ROTAS, "stop")])
+    data = _provider(c)._chat_json("sys", "user")
+    assert data["personal"] == {"slc": {"clase_2006": "21"}}
+    assert not any('"' in k for k in data)
+
+
+def test_claves_rotas_irrecuperables_se_reintentan(monkeypatch):
+    monkeypatch.setattr("app.llm.provider.espera_reintento", lambda e, i: 0)
+    roto = '{"resumen_ejecutivo": ["a"], "personal\\":{\\"slc": {}}'  # clave con un objeto adentro
+    c = _ClienteFalso([_resp(roto, "stop"), _resp(COMPLETO, "stop")])
+    data = _provider(c)._chat_json("sys", "user")
+    assert data["inteligencia"]["analisis_meteo"] == "x"
+    assert len(c.max_tokens) == 2

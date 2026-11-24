@@ -235,9 +235,47 @@ def _try_repair_json(raw: str) -> dict[str, Any] | None:
         if not fixed:
             return None
         data = json.loads(fixed)
-        return data if isinstance(data, dict) else None
+        return _sanear_claves(data) if isinstance(data, dict) else None
     except Exception:
         return None
+
+
+_CLAVE_ROTA = re.compile(r"[\"',:{}\[\]\s]")
+
+
+def _sanear_claves(data: dict[str, Any]) -> dict[str, Any] | None:
+    """Rescata lo que json_repair deja mal cuando el modelo escribe, p.ej.,
+    `"personal": "", {...}`: queda la clave 'personal",' con el objeto como texto
+    y 'personal' vacía. Se limpia la clave y se vuelve a leer el valor. Si aún
+    quedan claves rotas se devuelve None (se trata como JSON inválido y se
+    reintenta): nunca se acepta un SITREP con secciones vacías por un JSON roto."""
+    out: dict[str, Any] = {}
+    rotas: list[tuple[str, Any]] = []
+    for k, v in data.items():
+        if _CLAVE_ROTA.search(k):
+            rotas.append((k, v))
+        else:
+            out[k] = v
+    for k, v in rotas:
+        limpia = k.strip("\"',: {}[]\n\t")
+        if not limpia or _CLAVE_ROTA.search(limpia):
+            return None
+        valor = v
+        if isinstance(v, str):
+            texto = v.strip().lstrip("\"',:").strip()
+            try:
+                valor = json.loads(texto)
+            except Exception:
+                try:
+                    from json_repair import repair_json
+
+                    valor = json.loads(repair_json(texto))
+                except Exception:
+                    return None
+        if out.get(limpia) and out[limpia] != valor:
+            continue  # la clave buena ya tiene datos: se conservan
+        out[limpia] = valor
+    return out
 
 
 _RETRY_DELAY_RE = re.compile(
@@ -372,8 +410,12 @@ class _ChatJSONProvider(LLMProvider):
                         raise
                     resultado = "ok_reparado"
                     return reparado
-                resultado = "ok"
-                return data
+                saneado = _sanear_claves(data)
+                if saneado is None:
+                    resultado = "json_invalido"
+                    raise ValueError("JSON con claves rotas (p.ej. 'personal\",'); se reintenta")
+                resultado = "ok" if saneado == data else "ok_reparado"
+                return saneado
             except LLMError as e:
                 falla = e
                 raise  # error definitivo (truncación irreparable, rechazo): no reintentar

@@ -120,3 +120,12 @@ def test_exportar_texto_real_y_permisos(carpeta):
                        headers=_h("Oficial de Operaciones")).status_code == 403
     assert client.post("/qa/corridas/nada__corrida1/exportar", json={"formato": "PDF"},
                        headers=_h("Auditor")).status_code == 404
+
+
+def test_exactitud_acepta_miles_con_coma(carpeta):
+    # gpt-oss-120b escribe 1,440 (estilo inglés) para la cifra 1.440 / 1440 de los documentos
+    from app.qa_resultados import _formas
+
+    assert "1440" in _formas("1,440")
+    assert "1440" in _formas("1.440")
+    assert "2.5" in _formas("2,5")  # decimal con coma se mantiene
