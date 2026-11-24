@@ -934,8 +934,8 @@ export default function Briefing() {
                 Secciones institucionales
               </div>
               {paginasExcluidas(c).length > 0 && (
-                <p className="hint" style={{ margin: "0 0 var(--sp-3)" }}>
-                  <Icon name="info" /> No entran en este SITREP:{" "}
+                <p style={{ margin: "0 0 var(--sp-3)", fontSize: "var(--tx-lg)", lineHeight: 1.5, color: "var(--text-2)" }}>
+                  No entran en este SITREP:{" "}
                   {paginasExcluidas(c)
                     .map((k) => TITULO_PAGINA[k] || k)
                     .join(", ")}

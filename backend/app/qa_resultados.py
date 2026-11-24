@@ -34,9 +34,16 @@ PRECIOS_USD_MTOK: dict[str, tuple[float, float]] = {
     "openai/gpt-oss-20b": (0.075, 0.30),
     "openai/gpt-oss-120b": (0.15, 0.60),
     "qwen/qwen3.8-27b": (0.80, 4.00),
+    # QA de los mejores modelos (precios verificados nov-2026)
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "gemini-4-argon": (2.00, 10.00),          # sube a 4/20 desde el 1-dic-2026
+    "gemini-3.1-pro-preview": (2.00, 12.00),
+    "gemini-4-hydrogen": (1.50, 7.50),
+    "openai/gpt-5": (0.0, 0.0),               # GitHub Models (gratis)
 }
 USD_CLP = 984.09
-PRECIOS_FECHA = "oct-2026"
+PRECIOS_FECHA = "nov-2026"
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,120}__corrida\d{1,3}$")
 _LOTE_RE = re.compile(r"\s*\[([^\]]+)\]\s*$")
