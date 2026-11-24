@@ -1,0 +1,1966 @@
+{
+ "fases": {
+  "extraccion": {
+   "tiempo_s": 128.9,
+   "errores_doc": {},
+   "hechos_por_doc": {
+    "02_dotacion_personal.xlsx": 21,
+    "03_operacionalidad_logistica.xlsx": 8,
+    "04_operaciones_relevos.xlsx": 32,
+    "05_parte_meteorologico.txt": 6,
+    "07_correo_asuntos_criticos.eml": 3,
+    "08_bitacora_turno_cog.log": 8,
+    "09_operacionalidad.csv": 7
+   },
+   "llamadas": 7,
+   "reintentos": 0,
+   "fallas": 0,
+   "errores": [],
+   "truncadas": 0,
+   "tokens_in": 5109,
+   "tokens_out": 39570,
+   "latencia_llamada_prom_s": 61.8
+  },
+  "contradicciones": {
+   "tiempo_s": 225.4,
+   "detectadas": 0,
+   "error": null,
+   "llamadas": 1,
+   "reintentos": 0,
+   "fallas": 0,
+   "errores": [],
+   "truncadas": 0,
+   "tokens_in": 5832,
+   "tokens_out": 17808,
+   "latencia_llamada_prom_s": 225.36
+  },
+  "sintesis": {
+   "tiempo_s": 145.7,
+   "error": null,
+   "hechos_enviados": 85,
+   "contexto_chars": 6333,
+   "llamadas": 1,
+   "reintentos": 0,
+   "fallas": 0,
+   "errores": [],
+   "truncadas": 0,
+   "tokens_in": 10620,
+   "tokens_out": 14865,
+   "latencia_llamada_prom_s": 145.68
+  }
+ },
+ "tiempo_total_s": 500.0,
+ "sitrep_ok": true,
+ "calidad": {
+  "aciertos": 40,
+  "total": 40,
+  "pct": 100.0,
+  "por_seccion": {
+   "PERSONAL": "11/11",
+   "LOGISTICA": "4/4",
+   "OPERACIONES": "15/15",
+   "INTELIGENCIA": "4/4",
+   "EJECUTIVO": "6/6"
+  },
+  "detalle": [
+   {
+    "seccion": "PERSONAL",
+    "dato": "OF 2840",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "SOF 9120",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "ECP 18760",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Total institucional 43720",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "SLC total 4200",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Macrozona Norte fuerza 9800",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Fuerza de catástrofe 1500",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "Catástrofe faltan 60",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "UFEC 12",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "BRIFE 4",
+    "ok": true
+   },
+   {
+    "seccion": "PERSONAL",
+    "dato": "PARME 6",
+    "ok": true
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "Total material 1740",
+    "ok": true
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "NOP total 199",
+    "ok": true
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "7 unidades en operacionalidad",
+    "ok": true
+   },
+   {
+    "seccion": "LOGISTICA",
+    "dato": "JDN Biobío NOP 38",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 operaciones de catástrofe",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Concepción: 120 efectivos",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 relevos norte",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "2 relevos sur",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Antártica dotación 24",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "UNFICYP 14 efectivos",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Guardián soberano 3 JAF",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Tarapacá planificado 5.200",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Unidades en terreno 6",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Fuerza en terreno 540",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "10 UAC en traslados",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "III DE: 8 unidades",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue MZN 14",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue MZS 12",
+    "ok": true
+   },
+   {
+    "seccion": "OPERACIONES",
+    "dato": "Despliegue Antártica 1",
+    "ok": true
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "3 alertas vigentes",
+    "ok": true
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Alerta roja Biobío",
+    "ok": true
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Análisis meteo: sistema frontal",
+    "ok": true
+   },
+   {
+    "seccion": "INTELIGENCIA",
+    "dato": "Proyección 48 h: 30-50 mm o Ruta 5",
+    "ok": true
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Resumen de 5 a 10 bullets",
+    "ok": true
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "3 o más asuntos críticos",
+    "ok": true
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: aluvión Calama",
+    "ok": true
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: control fronterizo Putre",
+    "ok": true
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Asunto: sistema frontal / Biobío",
+    "ok": true
+   },
+   {
+    "seccion": "EJECUTIVO",
+    "dato": "Situación con panorama",
+    "ok": true
+   }
+  ],
+  "hechos": 85,
+  "hechos_con_cita": 85,
+  "citas_fieles": 85,
+  "eventos_clave": [
+   {
+    "evento": "Incendio forestal Florida / 120 efectivos",
+    "ok": true
+   },
+   {
+    "evento": "Evacuación Calama / 80 personas",
+    "ok": true
+   },
+   {
+    "evento": "Tránsito irregular Putre",
+    "ok": true
+   },
+   {
+    "evento": "Ruta 5 Sur habilitada",
+    "ok": true
+   },
+   {
+    "evento": "Alerta roja Biobío",
+    "ok": true
+   }
+  ],
+  "eventos_clave_ok": 5,
+  "trazas_validas": 115,
+  "avisos": [],
+  "modo_sintesis": "completa",
+  "bullets": 7
+ },
+ "tokens_in": 21561,
+ "tokens_out": 72243,
+ "llamadas": 9,
+ "sitrep": {
+  "resumen_ejecutivo": [
+   "Fuerza institucional total de 43.720 efectivos; SLC de 4.200 conscriptos (Clase 2006 y 2007).",
+   "Déficit de personal en macrozonas: Norte 390, Centro 420, Sur 440 y Austral 110 efectivos faltantes.",
+   "6 unidades desplegadas en terreno con 540 efectivos en 6 lugares activos; actividad principal: apoyo a catástrofe y control fronterizo.",
+   "Apoyo a incendio forestal en Concepción con 120 efectivos (JDN Biobío) y evacuación por aluvión en Calama con 60 efectivos (JAF Antofagasta).",
+   "Alerta Roja en Región del Biobío por sistema frontal; probable empleo de fuerza de respuesta a catástrofe en próximas 24 h.",
+   "Aumento de tránsito irregular en Putre; solicitud de refuerzo con 30 efectivos adicionales de FT Andes.",
+   "Guardian Soberano: en Arica y Parinacota se han ejecutado 1.850 m de trabajos de tierra de 2.400 m planificados; en Tarapacá 2.600 de 5.200; en Antofagasta 940 de 3.100."
+  ],
+  "asuntos_criticos": [
+   {
+    "asunto": "Sistema frontal en macrozona Sur con 120 efectivos en apoyo a incendio y preparación de fuerza de respuesta (1.500 disponibles).",
+    "impacto": "Probable empleo de fuerza de respuesta de catástrofe en próximas 24 h.",
+    "responsable": "Comandante JDN Biobío"
+   },
+   {
+    "asunto": "Evacuación por aluvión en Calama; 80 personas evacuadas; se solicita refuerzo de 2 camiones aljibe.",
+    "impacto": "Afectación a población y necesidad logística.",
+    "responsable": "Comandante JAF Antofagasta"
+   },
+   {
+    "asunto": "Aumento de tránsito irregular en Putre; solicitud de autorización para reforzar con 30 efectivos adicionales de FT Andes.",
+    "impacto": "Necesidad de control fronterizo reforzado.",
+    "responsable": "FT Andes"
+   }
+  ],
+  "proyeccion_24_72h": "Se mantiene el sistema frontal en la macrozona Sur con nuevas precipitaciones de 30 a 50 mm y probabilidad alta de anegamientos y cortes de ruta en la Ruta 5 Sur; en el norte persiste el riesgo de heladas; mejoría gradual hacia la macrozona Centro a partir del 24-06.",
+  "situacion": {
+   "resumen": "La institución mantiene 43.720 efectivos y despliega 6 unidades con 540 efectivos en terreno. El sistema frontal activo en la macrozona Sur genera alerta roja en Biobío y operaciones de apoyo a incendio y evacuaciones. Se registran déficits de personal en las macrozonas y aumento de tránsito irregular en el norte.",
+   "aspectos": [
+    "Sistema frontal activo en macrozona Sur con alerta roja Biobío; probable empleo de fuerza de respuesta a catástrofe.",
+    "Apoyo a incendio forestal en Concepción con 120 efectivos y evacuación por aluvión en Calama con 60 efectivos.",
+    "Control fronterizo en Putre: detección de 14 personas en tránsito irregular y solicitud de refuerzo de 30 efectivos.",
+    "Déficit de personal en macrozonas: Norte 390, Centro 420, Sur 440, Austral 110."
+   ]
+  },
+  "personal": {
+   "parte_fuerza_institucional": {
+    "OF": "2840",
+    "SOF": "9120",
+    "ECP": "18760",
+    "SLTP": "3450",
+    "ESCMIL": "1020",
+    "ESCSOF": "1480",
+    "ESCSERV": "640",
+    "personal_civil": "2210",
+    "SLC": "4200",
+    "total": "43720"
+   },
+   "slc": {
+    "clase_2006": "2100",
+    "clase_2007": "2100",
+    "total": "4200"
+   },
+   "macrozonas": [
+    {
+     "zona": "Norte",
+     "fuerza": "9800",
+     "forman": "9410",
+     "faltan": "390"
+    },
+    {
+     "zona": "Centro",
+     "fuerza": "12600",
+     "forman": "12180",
+     "faltan": "420"
+    },
+    {
+     "zona": "Sur",
+     "fuerza": "11200",
+     "forman": "10760",
+     "faltan": "440"
+    },
+    {
+     "zona": "Austral",
+     "fuerza": "3100",
+     "forman": "2990",
+     "faltan": "110"
+    }
+   ],
+   "catastrofe": {
+    "fuerza": "1500",
+    "forman": "1440",
+    "faltan": "60"
+   },
+   "unidades_emergencia": {
+    "ufec": "12",
+    "brife": "4",
+    "parme": "6"
+   }
+  },
+  "inteligencia": {
+   "incidentes_institucionales": [
+    {
+     "tipo": "Parte diario",
+     "descripcion": "Cierre de parte diario sin lesionados propios; alerta roja Biobío vigente."
+    }
+   ],
+   "incidentes_mootw": [
+    {
+     "tipo": "Incendio forestal",
+     "unidad": "JDN Biobío",
+     "descripcion": "Activación por incendio forestal sector Florida. Despliegue 120 efectivos."
+    },
+    {
+     "tipo": "Evacuación por aluvión",
+     "unidad": "JAF Antofagasta",
+     "descripcion": "Continúa evacuación preventiva quebrada Calama. 80 personas en albergue."
+    },
+    {
+     "tipo": "Control fronterizo",
+     "unidad": "FT Andes",
+     "descripcion": "Detección de 6 personas en tránsito irregular sector Putre; derivadas a PDI."
+    },
+    {
+     "tipo": "Control fronterizo",
+     "unidad": "FT Andes",
+     "descripcion": "Detección adicional de 8 personas; total jornada 14 derivadas a PDI."
+    },
+    {
+     "tipo": "Despeje de ruta",
+     "unidad": "JDN Araucanía",
+     "descripcion": "Ruta 5 Sur habilitada tras despeje de deslizamiento."
+    },
+    {
+     "tipo": "Apoyo albergues",
+     "unidad": "JDN Araucanía",
+     "descripcion": "Apoyo a albergues en Temuco con 56 efectivos."
+    }
+   ],
+   "sistema_alerta": [
+    {
+     "alerta": "Alerta Roja",
+     "area": "Región del Biobío",
+     "unidad_asociada": "JDN Biobío",
+     "apreciacion": "Probable empleo de fuerza de respuesta de catástrofe en próximas 24 h"
+    },
+    {
+     "alerta": "Alerta Amarilla",
+     "area": "Litoral de Araucanía",
+     "unidad_asociada": "JDN Araucanía",
+     "apreciacion": "Refuerzo preventivo de borde costero"
+    },
+    {
+     "alerta": "Alerta Amarilla",
+     "area": "Altiplano de Arica y Parinacota",
+     "unidad_asociada": "FT Andes",
+     "apreciacion": ""
+    }
+   ],
+   "analisis_meteo": "Macrozona Norte: cielos despejados, -6°C en Putre, riesgo de heladas; Macrozona Centro: nubosidad parcial, vientos SW 15-25 km/h, sin precipitaciones; Macrozona Sur: sistema frontal activo, precipitaciones 25-40 mm en 24h, vientos 40-60 km/h, oleaje en aumento; Macrozona Austral: nieve sobre 300 m, visibilidad reducida en pasos cordilleranos.",
+   "proyeccion_meteo_48h": "Se mantiene el sistema frontal en el sur con nuevas precipitaciones de 30 a 50 mm y probabilidad alta de anegamientos y cortes de ruta en la Ruta 5 Sur. En el norte persiste el riesgo de heladas. Mejoría gradual hacia la macrozona Centro a partir del 24-06."
+  },
+  "operaciones": {
+   "ops_catastrofe": [
+    {
+     "cantidad": "120",
+     "tipo": "Apoyo incendio forestal",
+     "unidad_origen": "JDN Biobío",
+     "zona_empleo": "Concepción",
+     "inicio_empleo": "22-06-2026"
+    },
+    {
+     "cantidad": "60",
+     "tipo": "Evacuación por aluvión",
+     "unidad_origen": "JAF Antofagasta",
+     "zona_empleo": "Calama",
+     "inicio_empleo": "21-06-2026"
+    }
+   ],
+   "relevos_norte": [
+    {
+     "n": "7",
+     "fecha": "25-06-2026",
+     "jaf": "JAF Tarapacá",
+     "unidades": "RR N°6 Pisagua",
+     "periodo": "Del 25 al 30-06-2026"
+    },
+    {
+     "n": "8",
+     "fecha": "28-06-2026",
+     "jaf": "JAF Arica y Parinacota",
+     "unidades": "GFE Visviri",
+     "periodo": "Del 28-06 al 03-07-2026"
+    }
+   ],
+   "relevos_sur": [
+    {
+     "n": "4",
+     "fecha": "27-06-2026",
+     "ft": "FT Araucanía",
+     "unidades": "RI N°8 Tucapel",
+     "periodo": "Del 27-06 al 02-07-2026"
+    },
+    {
+     "n": "5",
+     "fecha": "30-06-2026",
+     "ft": "FT Biobío",
+     "unidades": "RI N°6 Chacabuco",
+     "periodo": "Del 30-06 al 05-07-2026"
+    }
+   ],
+   "ops_antartica": [
+    {
+     "bae": "BAE O'Higgins",
+     "dotacion_estival": "24",
+     "cpccgu": "1"
+    }
+   ],
+   "ops_extranjero": [
+    {
+     "operacion": "UNFICYP",
+     "efectivos": "14",
+     "ubicacion": "Chipre",
+     "repliegue": "12-2026"
+    },
+    {
+     "operacion": "UNTSO",
+     "efectivos": "4",
+     "ubicacion": "Medio Oriente",
+     "repliegue": "02-2027"
+    }
+   ],
+   "guardian_soberano": [
+    {
+     "jaf": "JAF Arica y Parinacota",
+     "fuerza": "480",
+     "planif": "2.400 Mts",
+     "ejecut": "1.850 Mts"
+    },
+    {
+     "jaf": "JAF Tarapacá",
+     "fuerza": "320",
+     "planif": "5.200 Mts",
+     "ejecut": "2.600 Mts"
+    },
+    {
+     "jaf": "JAF Antofagasta",
+     "fuerza": "185",
+     "planif": "3.100 Mts",
+     "ejecut": "940 Mts"
+    }
+   ],
+   "unidades_terreno_kpi": {
+    "unidades_en_terreno": "6",
+    "fuerza_en_terreno": "540",
+    "lugares_activos": "6",
+    "actividad_principal": "Apoyo a catástrofe y control fronterizo"
+   },
+   "traslados_uac": [
+    {
+     "uac": "I DE",
+     "unidades": "5"
+    },
+    {
+     "uac": "II DE",
+     "unidades": "5"
+    },
+    {
+     "uac": "III DE",
+     "unidades": "8"
+    },
+    {
+     "uac": "IV DE",
+     "unidades": "4"
+    },
+    {
+     "uac": "V DE",
+     "unidades": "4"
+    },
+    {
+     "uac": "VI DE",
+     "unidades": "3"
+    },
+    {
+     "uac": "COPE",
+     "unidades": "2"
+    },
+    {
+     "uac": "CAF",
+     "unidades": "2"
+    },
+    {
+     "uac": "CGE",
+     "unidades": "1"
+    },
+    {
+     "uac": "DIVEDU",
+     "unidades": "1"
+    }
+   ],
+   "unidades_terreno": [
+    {
+     "actividad": "Ejercicio combinado",
+     "comando_matriz": "I División",
+     "ur": "RR N°1",
+     "fechas": "20 al 28-06-2026",
+     "ubicacion": "Pampa Chaca",
+     "fuerza": "250"
+    },
+    {
+     "actividad": "Patrullaje fronterizo",
+     "comando_matriz": "FT Andes",
+     "ur": "GFE Putre",
+     "fechas": "permanente",
+     "ubicacion": "Putre",
+     "fuerza": "30"
+    },
+    {
+     "actividad": "Apoyo incendio forestal",
+     "comando_matriz": "JDN Biobío",
+     "ur": "BRIFE Concepción",
+     "fechas": "desde 22-06-2026",
+     "ubicacion": "Concepción",
+     "fuerza": "120"
+    },
+    {
+     "actividad": "Evacuación por aluvión",
+     "comando_matriz": "JAF Antofagasta",
+     "ur": "UFEC Calama",
+     "fechas": "desde 21-06-2026",
+     "ubicacion": "Calama",
+     "fuerza": "60"
+    },
+    {
+     "actividad": "Apoyo albergues",
+     "comando_matriz": "JDN Araucanía",
+     "ur": "UFEC Temuco",
+     "fechas": "desde 22-06-2026",
+     "ubicacion": "Temuco",
+     "fuerza": "56"
+    },
+    {
+     "actividad": "Dotación estival",
+     "comando_matriz": "BAE O'Higgins",
+     "ur": "BAE",
+     "fechas": "permanente",
+     "ubicacion": "Antártica",
+     "fuerza": "24"
+    }
+   ],
+   "despliegue_mapa": {
+    "mzn": "14",
+    "mzs": "12",
+    "antartica": "1"
+   }
+  },
+  "logistica": {
+   "resumen": {
+    "total": "1740",
+    "nop": "199"
+   },
+   "operacionalidad": [
+    {
+     "unidad": "I División de Ejército",
+     "total": "380",
+     "nop": "41",
+     "campana": "40",
+     "combate": "35",
+     "administrativos": "20",
+     "eq_ingenieros": "12"
+    },
+    {
+     "unidad": "JAF Arica y Parinacota",
+     "total": "210",
+     "nop": "22",
+     "campana": "18",
+     "combate": "16",
+     "administrativos": "9",
+     "eq_ingenieros": "6"
+    },
+    {
+     "unidad": "JAF Tarapacá",
+     "total": "240",
+     "nop": "28",
+     "campana": "20",
+     "combate": "18",
+     "administrativos": "11",
+     "eq_ingenieros": "5"
+    },
+    {
+     "unidad": "JAF Antofagasta",
+     "total": "260",
+     "nop": "31",
+     "campana": "22",
+     "combate": "19",
+     "administrativos": "12",
+     "eq_ingenieros": "8"
+    },
+    {
+     "unidad": "JDN Biobío",
+     "total": "320",
+     "nop": "38",
+     "campana": "30",
+     "combate": "26",
+     "administrativos": "15",
+     "eq_ingenieros": "10"
+    },
+    {
+     "unidad": "JDN Araucanía",
+     "total": "300",
+     "nop": "35",
+     "campana": "28",
+     "combate": "24",
+     "administrativos": "14",
+     "eq_ingenieros": "9"
+    },
+    {
+     "unidad": "BAE O'Higgins",
+     "total": "30",
+     "nop": "4",
+     "campana": "8",
+     "combate": "6",
+     "administrativos": "10",
+     "eq_ingenieros": "2"
+    }
+   ]
+  },
+  "hojas_adicionales": [],
+  "trazabilidad": {
+   "resumen_ejecutivo[0]": [
+    "h9",
+    "h12"
+   ],
+   "resumen_ejecutivo[1]": [
+    "h13",
+    "h14",
+    "h15",
+    "h16"
+   ],
+   "resumen_ejecutivo[2]": [
+    "h41"
+   ],
+   "resumen_ejecutivo[3]": [
+    "h29",
+    "h30"
+   ],
+   "resumen_ejecutivo[4]": [
+    "h64",
+    "h67"
+   ],
+   "resumen_ejecutivo[5]": [
+    "h69"
+   ],
+   "resumen_ejecutivo[6]": [
+    "h42",
+    "h43",
+    "h44"
+   ],
+   "asuntos_criticos[0]": [
+    "h67",
+    "h64"
+   ],
+   "asuntos_criticos[1]": [
+    "h68"
+   ],
+   "asuntos_criticos[2]": [
+    "h69"
+   ],
+   "proyeccion_24_72h": [
+    "h61",
+    "h62",
+    "h63"
+   ],
+   "situacion.resumen": [
+    "h9",
+    "h41",
+    "h64",
+    "h69"
+   ],
+   "situacion.aspectos[0]": [
+    "h61",
+    "h64",
+    "h67"
+   ],
+   "situacion.aspectos[1]": [
+    "h29",
+    "h30"
+   ],
+   "situacion.aspectos[2]": [
+    "h73",
+    "h76",
+    "h69"
+   ],
+   "situacion.aspectos[3]": [
+    "h13",
+    "h14",
+    "h15",
+    "h16"
+   ],
+   "personal.parte_fuerza_institucional.OF": [
+    "h0"
+   ],
+   "personal.parte_fuerza_institucional.SOF": [
+    "h1"
+   ],
+   "personal.parte_fuerza_institucional.ECP": [
+    "h2"
+   ],
+   "personal.parte_fuerza_institucional.SLTP": [
+    "h3"
+   ],
+   "personal.parte_fuerza_institucional.ESCMIL": [
+    "h4"
+   ],
+   "personal.parte_fuerza_institucional.ESCSOF": [
+    "h5"
+   ],
+   "personal.parte_fuerza_institucional.ESCSERV": [
+    "h6"
+   ],
+   "personal.parte_fuerza_institucional.personal_civil": [
+    "h7"
+   ],
+   "personal.parte_fuerza_institucional.SLC": [
+    "h8"
+   ],
+   "personal.parte_fuerza_institucional.total": [
+    "h9"
+   ],
+   "personal.slc.clase_2006": [
+    "h10"
+   ],
+   "personal.slc.clase_2007": [
+    "h11"
+   ],
+   "personal.slc.total": [
+    "h12"
+   ],
+   "personal.macrozonas[0]": [
+    "h13"
+   ],
+   "personal.macrozonas[1]": [
+    "h14"
+   ],
+   "personal.macrozonas[2]": [
+    "h15"
+   ],
+   "personal.macrozonas[3]": [
+    "h16"
+   ],
+   "personal.catastrofe": [
+    "h17"
+   ],
+   "personal.unidades_emergencia.ufec": [
+    "h18"
+   ],
+   "personal.unidades_emergencia.brife": [
+    "h19"
+   ],
+   "personal.unidades_emergencia.parme": [
+    "h20"
+   ],
+   "inteligencia.incidentes_institucionales[0]": [
+    "h77"
+   ],
+   "inteligencia.incidentes_mootw[0]": [
+    "h71"
+   ],
+   "inteligencia.incidentes_mootw[1]": [
+    "h72"
+   ],
+   "inteligencia.incidentes_mootw[2]": [
+    "h73"
+   ],
+   "inteligencia.incidentes_mootw[3]": [
+    "h76"
+   ],
+   "inteligencia.incidentes_mootw[4]": [
+    "h75"
+   ],
+   "inteligencia.incidentes_mootw[5]": [
+    "h39"
+   ],
+   "inteligencia.sistema_alerta[0]": [
+    "h64"
+   ],
+   "inteligencia.sistema_alerta[1]": [
+    "h65"
+   ],
+   "inteligencia.sistema_alerta[2]": [
+    "h66"
+   ],
+   "inteligencia.analisis_meteo": [
+    "h61",
+    "h62",
+    "h63"
+   ],
+   "inteligencia.proyeccion_meteo_48h": [
+    "h61",
+    "h62",
+    "h63"
+   ],
+   "operaciones.ops_catastrofe[0]": [
+    "h29"
+   ],
+   "operaciones.ops_catastrofe[1]": [
+    "h30"
+   ],
+   "operaciones.relevos_norte[0]": [
+    "h31"
+   ],
+   "operaciones.relevos_norte[1]": [
+    "h32"
+   ],
+   "operaciones.relevos_sur[0]": [
+    "h33"
+   ],
+   "operaciones.relevos_sur[1]": [
+    "h34"
+   ],
+   "operaciones.ops_antartica[0]": [
+    "h55"
+   ],
+   "operaciones.ops_extranjero[0]": [
+    "h56"
+   ],
+   "operaciones.ops_extranjero[1]": [
+    "h57"
+   ],
+   "operaciones.guardian_soberano[0]": [
+    "h42"
+   ],
+   "operaciones.guardian_soberano[1]": [
+    "h43"
+   ],
+   "operaciones.guardian_soberano[2]": [
+    "h44"
+   ],
+   "operaciones.unidades_terreno_kpi": [
+    "h41"
+   ],
+   "operaciones.traslados_uac[0]": [
+    "h45"
+   ],
+   "operaciones.traslados_uac[1]": [
+    "h46"
+   ],
+   "operaciones.traslados_uac[2]": [
+    "h47"
+   ],
+   "operaciones.traslados_uac[3]": [
+    "h48"
+   ],
+   "operaciones.traslados_uac[4]": [
+    "h49"
+   ],
+   "operaciones.traslados_uac[5]": [
+    "h50"
+   ],
+   "operaciones.traslados_uac[6]": [
+    "h51"
+   ],
+   "operaciones.traslados_uac[7]": [
+    "h52"
+   ],
+   "operaciones.traslados_uac[8]": [
+    "h53"
+   ],
+   "operaciones.traslados_uac[9]": [
+    "h54"
+   ],
+   "operaciones.unidades_terreno[0]": [
+    "h35"
+   ],
+   "operaciones.unidades_terreno[1]": [
+    "h36"
+   ],
+   "operaciones.unidades_terreno[2]": [
+    "h37"
+   ],
+   "operaciones.unidades_terreno[3]": [
+    "h38"
+   ],
+   "operaciones.unidades_terreno[4]": [
+    "h39"
+   ],
+   "operaciones.unidades_terreno[5]": [
+    "h40"
+   ],
+   "operaciones.despliegue_mapa": [
+    "h58",
+    "h59",
+    "h60"
+   ],
+   "logistica.resumen": [
+    "h28"
+   ],
+   "logistica.operacionalidad[0]": [
+    "h21"
+   ],
+   "logistica.operacionalidad[1]": [
+    "h22"
+   ],
+   "logistica.operacionalidad[2]": [
+    "h23"
+   ],
+   "logistica.operacionalidad[3]": [
+    "h24"
+   ],
+   "logistica.operacionalidad[4]": [
+    "h25"
+   ],
+   "logistica.operacionalidad[5]": [
+    "h26"
+   ],
+   "logistica.operacionalidad[6]": [
+    "h27"
+   ]
+  },
+  "generacion": {
+   "modo": "completa",
+   "avisos": []
+  }
+ },
+ "hechos": [
+  {
+   "evento": "Dotación de Oficiales (OF): 2840",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "2840 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "OF\t2840",
+   "id": "h0",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación de Suboficiales (SOF): 9120",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "9120 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "SOF\t9120",
+   "id": "h1",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación ECP: 18760",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "18760 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "ECP\t18760",
+   "id": "h2",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación SLTP: 3450",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "3450 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "SLTP\t3450",
+   "id": "h3",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación ESCMIL: 1020",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "1020 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "ESCMIL\t1020",
+   "id": "h4",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación ESCSOF: 1480",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "1480 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "ESCSOF\t1480",
+   "id": "h5",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación ESCSERV: 640",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "640 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "ESCSERV\t640",
+   "id": "h6",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación Personal civil: 2210",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "2210 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "Personal civil\t2210",
+   "id": "h7",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Dotación SLC: 4200",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "4200 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "SLC\t4200",
+   "id": "h8",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Total fuerza institucional: 43720",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "43720 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "TOTAL\t43720",
+   "id": "h9",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Soldados conscriptos Clase 2006: 2100",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "2100 conscriptos",
+   "estado": "ABIERTO",
+   "texto_origen": "Clase 2006\t2100",
+   "id": "h10",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Soldados conscriptos Clase 2007: 2100",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "2100 conscriptos",
+   "estado": "ABIERTO",
+   "texto_origen": "Clase 2007\t2100",
+   "id": "h11",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Total soldados conscriptos: 4200",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "4200 conscriptos",
+   "estado": "ABIERTO",
+   "texto_origen": "TOTAL\t4200",
+   "id": "h12",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Fuerza en macrozona Norte: 9800 requeridos, 9410 forman, 390 faltan",
+   "ocurrido_en": "",
+   "ubicacion": "Norte",
+   "responsable": "",
+   "impacto": "Déficit de 390 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "Norte\t9800\t9410\t390",
+   "id": "h13",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Fuerza en macrozona Centro: 12600 requeridos, 12180 forman, 420 faltan",
+   "ocurrido_en": "",
+   "ubicacion": "Centro",
+   "responsable": "",
+   "impacto": "Déficit de 420 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "Centro\t12600\t12180\t420",
+   "id": "h14",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Fuerza en macrozona Sur: 11200 requeridos, 10760 forman, 440 faltan",
+   "ocurrido_en": "",
+   "ubicacion": "Sur",
+   "responsable": "",
+   "impacto": "Déficit de 440 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "Sur\t11200\t10760\t440",
+   "id": "h15",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Fuerza en macrozona Austral: 3100 requeridos, 2990 forman, 110 faltan",
+   "ocurrido_en": "",
+   "ubicacion": "Austral",
+   "responsable": "",
+   "impacto": "Déficit de 110 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "Austral\t3100\t2990\t110",
+   "id": "h16",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Fuerza de respuesta ante catástrofe: 1500 requeridos, 1440 forman, 60 faltan",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "Déficit de 60 efectivos",
+   "estado": "ABIERTO",
+   "texto_origen": "1500\t1440\t60",
+   "id": "h17",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Unidades de emergencia UFEC disponibles: 12",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "12 unidades disponibles",
+   "estado": "ABIERTO",
+   "texto_origen": "UFEC\t12",
+   "id": "h18",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Unidades de emergencia BRIFE disponibles: 4",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "4 unidades disponibles",
+   "estado": "ABIERTO",
+   "texto_origen": "BRIFE\t4",
+   "id": "h19",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "Unidades de emergencia PARME disponibles: 6",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "6 unidades disponibles",
+   "estado": "ABIERTO",
+   "texto_origen": "PARME\t6",
+   "id": "h20",
+   "fuente": "02_dotacion_personal.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 380, NOP 41, Campaña 40, Combate 35, Administrativos 20, Eq.Ingenieros 12",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "I División de Ejército",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "I División de Ejército\t380\t41\t40\t35\t20\t12",
+   "id": "h21",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 210, NOP 22, Campaña 18, Combate 16, Administrativos 9, Eq.Ingenieros 6",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "JAF Arica y Parinacota",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Arica y Parinacota\t210\t22\t18\t16\t9\t6",
+   "id": "h22",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 240, NOP 28, Campaña 20, Combate 18, Administrativos 11, Eq.Ingenieros 5",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "JAF Tarapacá",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Tarapacá\t240\t28\t20\t18\t11\t5",
+   "id": "h23",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 260, NOP 31, Campaña 22, Combate 19, Administrativos 12, Eq.Ingenieros 8",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "JAF Antofagasta",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Antofagasta\t260\t31\t22\t19\t12\t8",
+   "id": "h24",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 320, NOP 38, Campaña 30, Combate 26, Administrativos 15, Eq.Ingenieros 10",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "JDN Biobío",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JDN Biobío\t320\t38\t30\t26\t15\t10",
+   "id": "h25",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 300, NOP 35, Campaña 28, Combate 24, Administrativos 14, Eq.Ingenieros 9",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "JDN Araucanía",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JDN Araucanía\t300\t35\t28\t24\t14\t9",
+   "id": "h26",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "La unidad registra: Total 30, NOP 4, Campaña 8, Combate 6, Administrativos 10, Eq.Ingenieros 2",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "BAE O'Higgins",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "BAE O'Higgins\t30\t4\t8\t6\t10\t2",
+   "id": "h27",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "Resumen: Total 1740, NOP 199",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "RESUMEN\t1740\t199",
+   "id": "h28",
+   "fuente": "03_operacionalidad_logistica.xlsx"
+  },
+  {
+   "evento": "Apoyo incendio forestal",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Concepción",
+   "responsable": "JDN Biobío",
+   "impacto": "120",
+   "estado": "ABIERTO",
+   "texto_origen": "120 Apoyo incendio forestal JDN Biobío Concepción 22-06-2026",
+   "id": "h29",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Evacuación por aluvión",
+   "ocurrido_en": "2026-06-21",
+   "ubicacion": "Calama",
+   "responsable": "JAF Antofagasta",
+   "impacto": "60",
+   "estado": "ABIERTO",
+   "texto_origen": "60 Evacuación por aluvión JAF Antofagasta Calama 21-06-2026",
+   "id": "h30",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Relevo de unidad RR N°6 Pisagua",
+   "ocurrido_en": "2026-06-25/2026-06-30",
+   "ubicacion": "Pisagua",
+   "responsable": "JAF Tarapacá",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "7 25-06-2026 JAF Tarapacá RR N°6 Pisagua Del 25 al 30-06-2026",
+   "id": "h31",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Relevo de unidad GFE Visviri",
+   "ocurrido_en": "2026-06-28/2026-07-03",
+   "ubicacion": "Visviri",
+   "responsable": "JAF Arica y Parinacota",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "8 28-06-2026 JAF Arica y Parinacota GFE Visviri Del 28-06 al 03-07-2026",
+   "id": "h32",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Relevo de unidad RI N°8 Tucapel",
+   "ocurrido_en": "2026-06-27/2026-07-02",
+   "ubicacion": "",
+   "responsable": "FT Araucanía",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "4 27-06-2026 FT Araucanía RI N°8 Tucapel Del 27-06 al 02-07-2026",
+   "id": "h33",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Relevo de unidad RI N°6 Chacabuco",
+   "ocurrido_en": "2026-06-30/2026-07-05",
+   "ubicacion": "",
+   "responsable": "FT Biobío",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "5 30-06-2026 FT Biobío RI N°6 Chacabuco Del 30-06 al 05-07-2026",
+   "id": "h34",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Ejercicio combinado",
+   "ocurrido_en": "2026-06-20/2026-06-28",
+   "ubicacion": "Pampa Chaca",
+   "responsable": "I División",
+   "impacto": "250",
+   "estado": "ABIERTO",
+   "texto_origen": "Ejercicio combinado I División RR N°1 20 al 28-06-2026 Pampa Chaca 250",
+   "id": "h35",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Patrullaje fronterizo",
+   "ocurrido_en": "",
+   "ubicacion": "Putre",
+   "responsable": "FT Andes",
+   "impacto": "30",
+   "estado": "ABIERTO",
+   "texto_origen": "Patrullaje fronterizo FT Andes GFE Putre permanente Putre 30",
+   "id": "h36",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Apoyo incendio forestal",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Concepción",
+   "responsable": "JDN Biobío",
+   "impacto": "120",
+   "estado": "ABIERTO",
+   "texto_origen": "Apoyo incendio forestal JDN Biobío BRIFE Concepción desde 22-06-2026 Concepción 120",
+   "id": "h37",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Evacuación por aluvión",
+   "ocurrido_en": "2026-06-21",
+   "ubicacion": "Calama",
+   "responsable": "JAF Antofagasta",
+   "impacto": "60",
+   "estado": "ABIERTO",
+   "texto_origen": "Evacuación por aluvión JAF Antofagasta UFEC Calama desde 21-06-2026 Calama 60",
+   "id": "h38",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Apoyo albergues",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Temuco",
+   "responsable": "JDN Araucanía",
+   "impacto": "56",
+   "estado": "ABIERTO",
+   "texto_origen": "Apoyo albergues JDN Araucanía UFEC Temuco desde 22-06-2026 Temuco 56",
+   "id": "h39",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Dotación estival",
+   "ocurrido_en": "",
+   "ubicacion": "Antártica",
+   "responsable": "BAE O'Higgins",
+   "impacto": "24",
+   "estado": "ABIERTO",
+   "texto_origen": "Dotación estival BAE O'Higgins BAE permanente Antártica 24",
+   "id": "h40",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Apoyo a catástrofe y control fronterizo",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "",
+   "impacto": "6 unidades en terreno, 540 fuerza en terreno, 6 lugares activos",
+   "estado": "ABIERTO",
+   "texto_origen": "6 540 6 Apoyo a catástrofe y control fronterizo",
+   "id": "h41",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Trabajos de tierra",
+   "ocurrido_en": "",
+   "ubicacion": "Arica y Parinacota",
+   "responsable": "JAF Arica y Parinacota",
+   "impacto": "Fuerza actual 480, planificados 2.400 Mts, ejecutados 1.850 Mts",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Arica y Parinacota 480 2.400 Mts 1.850 Mts",
+   "id": "h42",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Trabajos de tierra",
+   "ocurrido_en": "",
+   "ubicacion": "Tarapacá",
+   "responsable": "JAF Tarapacá",
+   "impacto": "Fuerza actual 320, planificados 5.200 Mts, ejecutados 2.600 Mts",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Tarapacá 320 5.200 Mts 2.600 Mts",
+   "id": "h43",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Trabajos de tierra",
+   "ocurrido_en": "",
+   "ubicacion": "Antofagasta",
+   "responsable": "JAF Antofagasta",
+   "impacto": "Fuerza actual 185, planificados 3.100 Mts, ejecutados 940 Mts",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Antofagasta 185 3.100 Mts 940 Mts",
+   "id": "h44",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "I DE",
+   "impacto": "5",
+   "estado": "ABIERTO",
+   "texto_origen": "I DE 5",
+   "id": "h45",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "II DE",
+   "impacto": "5",
+   "estado": "ABIERTO",
+   "texto_origen": "II DE 5",
+   "id": "h46",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "III DE",
+   "impacto": "8",
+   "estado": "ABIERTO",
+   "texto_origen": "III DE 8",
+   "id": "h47",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "IV DE",
+   "impacto": "4",
+   "estado": "ABIERTO",
+   "texto_origen": "IV DE 4",
+   "id": "h48",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "V DE",
+   "impacto": "4",
+   "estado": "ABIERTO",
+   "texto_origen": "V DE 4",
+   "id": "h49",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "VI DE",
+   "impacto": "3",
+   "estado": "ABIERTO",
+   "texto_origen": "VI DE 3",
+   "id": "h50",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "COPE",
+   "impacto": "2",
+   "estado": "ABIERTO",
+   "texto_origen": "COPE 2",
+   "id": "h51",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "CAF",
+   "impacto": "2",
+   "estado": "ABIERTO",
+   "texto_origen": "CAF 2",
+   "id": "h52",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "CGE",
+   "impacto": "1",
+   "estado": "ABIERTO",
+   "texto_origen": "CGE 1",
+   "id": "h53",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Traslado de unidades",
+   "ocurrido_en": "",
+   "ubicacion": "",
+   "responsable": "DIVEDU",
+   "impacto": "1",
+   "estado": "ABIERTO",
+   "texto_origen": "DIVEDU 1",
+   "id": "h54",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Dotación estival y CPCCGU",
+   "ocurrido_en": "",
+   "ubicacion": "Antártica",
+   "responsable": "BAE O'Higgins",
+   "impacto": "Dotación estival 24, CPCCGU 1",
+   "estado": "ABIERTO",
+   "texto_origen": "BAE O'Higgins 24 1",
+   "id": "h55",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Operación UNFICYP",
+   "ocurrido_en": "",
+   "ubicacion": "Chipre",
+   "responsable": "",
+   "impacto": "14",
+   "estado": "ABIERTO",
+   "texto_origen": "UNFICYP 14 Chipre 12-2026",
+   "id": "h56",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Operación UNTSO",
+   "ocurrido_en": "",
+   "ubicacion": "Medio Oriente",
+   "responsable": "",
+   "impacto": "4",
+   "estado": "ABIERTO",
+   "texto_origen": "UNTSO 4 Medio Oriente 02-2027",
+   "id": "h57",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Unidades desplegadas",
+   "ocurrido_en": "",
+   "ubicacion": "MZN (Macrozona Norte)",
+   "responsable": "",
+   "impacto": "14",
+   "estado": "ABIERTO",
+   "texto_origen": "MZN (Macrozona Norte) 14",
+   "id": "h58",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Unidades desplegadas",
+   "ocurrido_en": "",
+   "ubicacion": "MZS (Macrozona Sur)",
+   "responsable": "",
+   "impacto": "12",
+   "estado": "ABIERTO",
+   "texto_origen": "MZS (Macrozona Sur) 12",
+   "id": "h59",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Unidades desplegadas",
+   "ocurrido_en": "",
+   "ubicacion": "Antártica",
+   "responsable": "",
+   "impacto": "1",
+   "estado": "ABIERTO",
+   "texto_origen": "Antártica 1",
+   "id": "h60",
+   "fuente": "04_operaciones_relevos.xlsx"
+  },
+  {
+   "evento": "Sistema frontal activo en macrozona Sur con precipitaciones y vientos",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Macrozona Sur",
+   "responsable": "",
+   "impacto": "Precipitaciones de 25 a 40 mm en 24 h, vientos de 40 a 60 km/h, oleaje en aumento en el litoral de Biobío y Araucanía",
+   "estado": "EN_CURSO",
+   "texto_origen": "- Macrozona Sur: sistema frontal activo, precipitaciones de 25 a 40 mm en 24 h, vientos de 40 a 60 km/h, oleaje en aumento en el litoral de Biobío y Araucanía.",
+   "id": "h61",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Nieve sobre 300 m con visibilidad reducida en pasos cordilleranos",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Macrozona Austral",
+   "responsable": "",
+   "impacto": "Visibilidad reducida en pasos cordilleranos",
+   "estado": "EN_CURSO",
+   "texto_origen": "- Macrozona Austral: nieve sobre 300 m, visibilidad reducida en pasos cordilleranos.",
+   "id": "h62",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Temperaturas bajo cero y riesgo de heladas en rutas de altura",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Macrozona Norte (altiplano/Putre)",
+   "responsable": "",
+   "impacto": "Riesgo de heladas en rutas de altura; -6°C en Putre",
+   "estado": "EN_CURSO",
+   "texto_origen": "- Macrozona Norte: cielos despejados, temperaturas bajo cero en el altiplano (-6°C en Putre), riesgo de heladas en rutas de altura.",
+   "id": "h63",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Alerta Roja por sistema frontal en Región del Biobío",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Región del Biobío",
+   "responsable": "JDN Biobío",
+   "impacto": "Probable empleo de fuerza de respuesta de catástrofe en próximas 24 h",
+   "estado": "EN_CURSO",
+   "texto_origen": "- ALERTA ROJA por sistema frontal — Región del Biobío — Unidad asociada: JDN Biobío — Apreciación: probable empleo de fuerza de respuesta de catástrofe en próximas 24 h.",
+   "id": "h64",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Alerta Amarilla por marejadas en litoral de Araucanía",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Litoral de Araucanía",
+   "responsable": "JDN Araucanía",
+   "impacto": "Refuerzo preventivo de borde costero",
+   "estado": "EN_CURSO",
+   "texto_origen": "- ALERTA AMARILLA por marejadas — litoral de Araucanía — Unidad asociada: JDN Araucanía — Apreciación: refuerzo preventivo de borde costero.",
+   "id": "h65",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Alerta Amarilla por heladas en altiplano de Arica y Parinacota",
+   "ocurrido_en": "2026-06-22T17:00:00",
+   "ubicacion": "Altiplano de Arica y Parinacota",
+   "responsable": "FT Andes",
+   "impacto": "",
+   "estado": "EN_CURSO",
+   "texto_origen": "- ALERTA AMARILLA por heladas — altiplano de Arica y Parinacota — Unidad asociada: FT Andes.",
+   "id": "h66",
+   "fuente": "05_parte_meteorologico.txt"
+  },
+  {
+   "evento": "Apoyo a incendio forestal y preparación de fuerza de respuesta a catástrofe",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Macrozona Sur, Biobío",
+   "responsable": "Comandante JDN Biobío",
+   "impacto": "120 efectivos en apoyo a incendio forestal; 1.500 efectivos disponibles para fuerza de respuesta a catástrofe",
+   "estado": "EN_CURSO",
+   "texto_origen": "La JDN Biobío mantiene 120 efectivos en apoyo a incendio forestal y prepara empleo de la fuerza de respuesta de catástrofe (1.500 efectivos disponibles a nivel institucional).",
+   "id": "h67",
+   "fuente": "07_correo_asuntos_criticos.eml"
+  },
+  {
+   "evento": "Evacuación por aluvión en Calama y solicitud de refuerzo de camiones aljibe",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Calama",
+   "responsable": "Comandante JAF Antofagasta",
+   "impacto": "80 personas evacuadas; solicitud de 2 camiones aljibe de refuerzo",
+   "estado": "EN_CURSO",
+   "texto_origen": "Evacuación por aluvión en Calama. 80 personas evacuadas; la JAF Antofagasta solicita refuerzo de 2 camiones aljibe.",
+   "id": "h68",
+   "fuente": "07_correo_asuntos_criticos.eml"
+  },
+  {
+   "evento": "Aumento de tránsito irregular en control fronterizo y solicitud de refuerzo",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Putre",
+   "responsable": "",
+   "impacto": "Solicitud de autorización para reforzar con 30 efectivos adicionales de la FT Andes",
+   "estado": "ABIERTO",
+   "texto_origen": "Control fronterizo en Putre. Aumento de tránsito irregular; se solicita autorización para reforzar con 30 efectivos adicionales de la FT Andes.",
+   "id": "h69",
+   "fuente": "07_correo_asuntos_criticos.eml"
+  },
+  {
+   "evento": "Inicio de turno. Sin novedad en el relevo. Fuerza en terreno: 540 efectivos, 6 unidades, 6 lugares activos.",
+   "ocurrido_en": "2026-06-22T06:00",
+   "ubicacion": "",
+   "responsable": "COG",
+   "impacto": "Fuerza en terreno de 540 efectivos en 6 unidades y 6 lugares activos; sin novedad en el relevo.",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 06:00  COG  Inicio de turno. Sin novedad en el relevo. Fuerza en terreno: 540 (6 unidades, 6 lugares activos).",
+   "id": "h70",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Activación por incendio forestal sector Florida. Despliegue 120 efectivos.",
+   "ocurrido_en": "2026-06-22T07:42",
+   "ubicacion": "sector Florida",
+   "responsable": "JDN-BIOBIO",
+   "impacto": "Despliegue de 120 efectivos para atender incendio forestal.",
+   "estado": "EN_CURSO",
+   "texto_origen": "2026-06-22 07:42  JDN-BIOBIO  Activación por incendio forestal sector Florida. Despliegue 120 efectivos.",
+   "id": "h71",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Continúa evacuación preventiva quebrada Calama. 80 personas en albergue.",
+   "ocurrido_en": "2026-06-22T09:15",
+   "ubicacion": "quebrada Calama",
+   "responsable": "JAF-ANTOF",
+   "impacto": "80 personas albergadas durante evacuación preventiva.",
+   "estado": "EN_CURSO",
+   "texto_origen": "2026-06-22 09:15  JAF-ANTOF  Continúa evacuación preventiva quebrada Calama. 80 personas en albergue.",
+   "id": "h72",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Detección de 6 personas en tránsito irregular sector Putre. Derivadas a PDI.",
+   "ocurrido_en": "2026-06-22T10:30",
+   "ubicacion": "sector Putre",
+   "responsable": "FT-ANDES",
+   "impacto": "6 personas detectadas en tránsito irregular y derivadas a PDI.",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 10:30  FT-ANDES  Detección de 6 personas en tránsito irregular sector Putre. Derivadas a PDI.",
+   "id": "h73",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Parte parcial al EMG. Sistema frontal sur en intensificación.",
+   "ocurrido_en": "2026-06-22T12:00",
+   "ubicacion": "",
+   "responsable": "COG",
+   "impacto": "Reporte parcial emitido al EMG; sistema frontal sur en intensificación.",
+   "estado": "EN_CURSO",
+   "texto_origen": "2026-06-22 12:00  COG  Parte parcial al EMG. Sistema frontal sur en intensificación.",
+   "id": "h74",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Ruta 5 Sur habilitada tras despeje de deslizamiento. Estado: CERRADO.",
+   "ocurrido_en": "2026-06-22T14:20",
+   "ubicacion": "Ruta 5 Sur",
+   "responsable": "JDN-ARAUC",
+   "impacto": "Ruta 5 Sur habilitada tras despeje de deslizamiento; incidente cerrado.",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 14:20  JDN-ARAUC  Ruta 5 Sur habilitada tras despeje de deslizamiento. Estado: CERRADO.",
+   "id": "h75",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Detección adicional de 8 personas en tránsito irregular. Total jornada: 14. Derivadas a PDI.",
+   "ocurrido_en": "2026-06-22T16:05",
+   "ubicacion": "",
+   "responsable": "FT-ANDES",
+   "impacto": "8 personas adicionales detectadas; total del día 14 personas derivadas a PDI.",
+   "estado": "CERRADO",
+   "texto_origen": "2026-06-22 16:05  FT-ANDES  Detección adicional de 8 personas. Total jornada: 14. Derivadas a PDI.",
+   "id": "h76",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Cierre de parte diario. Sin lesionados propios. Alerta roja Biobío vigente.",
+   "ocurrido_en": "2026-06-22T17:50",
+   "ubicacion": "",
+   "responsable": "COG",
+   "impacto": "Cierre de parte diario sin lesionados propios; alerta roja en Biobío continúa vigente.",
+   "estado": "EN_CURSO",
+   "texto_origen": "2026-06-22 17:50  COG  Cierre de parte diario. Sin lesionados propios. Alerta roja Biobío vigente.",
+   "id": "h77",
+   "fuente": "08_bitacora_turno_cog.log"
+  },
+  {
+   "evento": "Registro de personal de I Division de Ejercito: Total 380, NOP 41, Campana 40, Combate 35",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "",
+   "responsable": "I Division de Ejercito",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "I Division de Ejercito,380,41,40,35,22-06-2026",
+   "id": "h78",
+   "fuente": "09_operacionalidad.csv"
+  },
+  {
+   "evento": "Registro de personal de JAF Arica y Parinacota: Total 210, NOP 22, Campana 18, Combate 16",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Arica y Parinacota",
+   "responsable": "JAF Arica y Parinacota",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Arica y Parinacota,210,22,18,16,22-06-2026",
+   "id": "h79",
+   "fuente": "09_operacionalidad.csv"
+  },
+  {
+   "evento": "Registro de personal de JAF Tarapaca: Total 240, NOP 28, Campana 20, Combate 18",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Tarapaca",
+   "responsable": "JAF Tarapaca",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Tarapaca,240,28,20,18,22-06-2026",
+   "id": "h80",
+   "fuente": "09_operacionalidad.csv"
+  },
+  {
+   "evento": "Registro de personal de JAF Antofagasta: Total 260, NOP 31, Campana 22, Combate 19",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Antofagasta",
+   "responsable": "JAF Antofagasta",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JAF Antofagasta,260,31,22,19,22-06-2026",
+   "id": "h81",
+   "fuente": "09_operacionalidad.csv"
+  },
+  {
+   "evento": "Registro de personal de JDN Biobio: Total 320, NOP 38, Campana 30, Combate 26",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Biobio",
+   "responsable": "JDN Biobio",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JDN Biobio,320,38,30,26,22-06-2026",
+   "id": "h82",
+   "fuente": "09_operacionalidad.csv"
+  },
+  {
+   "evento": "Registro de personal de JDN Araucania: Total 300, NOP 35, Campana 28, Combate 24",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "Araucania",
+   "responsable": "JDN Araucania",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "JDN Araucania,300,35,28,24,22-06-2026",
+   "id": "h83",
+   "fuente": "09_operacionalidad.csv"
+  },
+  {
+   "evento": "Registro de personal de BAE O'Higgins: Total 30, NOP 4, Campana 8, Combate 6",
+   "ocurrido_en": "2026-06-22",
+   "ubicacion": "",
+   "responsable": "BAE O'Higgins",
+   "impacto": "",
+   "estado": "ABIERTO",
+   "texto_origen": "BAE O'Higgins,30,4,8,6,22-06-2026",
+   "id": "h84",
+   "fuente": "09_operacionalidad.csv"
+  }
+ ],
+ "contradicciones": [],
+ "etiqueta": "DeepSeek V4 Pro [QA mejores modelos]",
+ "proveedor": "deepseek",
+ "modelo": "deepseek-v4-pro",
+ "grupo": "nube",
+ "cambios": {},
+ "corrida": 2,
+ "inicio": "2026-11-24T02:05:00.741030+00:00",
+ "prueba_ms": 2350,
+ "max_output_tokens": 32768,
+ "context_tokens": 0,
+ "sintesis_modo": "auto"
+}

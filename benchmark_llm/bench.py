@@ -356,6 +356,13 @@ NUBE = [
     ("groq", "qwen/qwen3.8-27b", "Groq Qwen3.8 27B", {}, 2),
     ("groq", "llama-3.3-70b-versatile", "Groq Llama 3.3 70B (config actual)", {}, 1),
     ("github", "openai/gpt-4o", "GitHub Models gpt-4o (config actual)", {}, 1),
+    # --- QA nov-2026: los mejores modelos de cada proveedor para sintetizar ---
+    ("anthropic", "claude-opus-5-5", "Claude Opus 5.5", {}, 3),
+    ("anthropic", "claude-sonnet-5-5", "Claude Sonnet 5.5", {}, 3),
+    ("github", "openai/gpt-5", "OpenAI GPT-5 (GitHub Models gratis)", {}, 3),
+    ("gemini", "gemini-4-argon", "Gemini 4 Argon", {}, 3),
+    ("gemini", "gemini-3.1-pro-preview", "Gemini 3.1 Pro", {}, 3),
+    ("gemini", "gemini-4-hydrogen", "Gemini 4 Hydrogen", {}, 3),
 ]
 
 
@@ -453,7 +460,7 @@ def main() -> None:
 
     if solo in ("", "nube"):
         log("=== Modelos en la nube ===")
-        for prov in ("gemini", "deepseek", "groq"):
+        for prov in ("gemini", "deepseek", "groq", "anthropic", "github"):
             try:
                 aj = ajustes.construir(prov, {"modelo": "-"}, origen="env")
                 lista = listar_modelos(aj)
