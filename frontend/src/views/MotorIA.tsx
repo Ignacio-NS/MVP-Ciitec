@@ -3,6 +3,7 @@ import { api, mensajeError } from "../api";
 import { useAuth } from "../auth";
 import { Icon } from "../components/icons";
 import { fmtFecha } from "../components/ui";
+import { ContenidoSitrep } from "./ContenidoSitrep";
 
 // Ver el motor activo: Administrador, Auditor y Oficial de Seguridad. Cambiarlo: solo el
 // Administrador del Sistema (el backend lo vuelve a exigir: esto solo ordena la interfaz).
@@ -122,6 +123,7 @@ export default function MotorIA() {
   const [manual, setManual] = useState(false);
   const [verif, setVerif] = useState<(Tarea & { modelo: string }) | null>(null);
   const [descarga, setDescarga] = useState<(Tarea & { modelo: string }) | null>(null);
+  const [verContenido, setVerContenido] = useState(false);
   const vivo = useRef(true);
   // En React StrictMode (desarrollo) el efecto se monta, desmonta y vuelve a montar:
   // hay que volver a marcarlo vivo al montar, o toda verificación se "cancelaba".
@@ -393,6 +395,14 @@ export default function MotorIA() {
             la próxima generación y queda en la auditoría.
           </p>
         </div>
+        <button
+          className={`btn ${verContenido ? "btn--primary" : "btn--secondary"}`}
+          onClick={() => setVerContenido((v) => !v)}
+          aria-expanded={verContenido}
+        >
+          <Icon name="list" />
+          Contenido del SITREP
+        </button>
       </div>
 
       {error && (
@@ -427,6 +437,7 @@ export default function MotorIA() {
       )}
 
       <div className="stack">
+        {verContenido && <ContenidoSitrep onCerrar={() => setVerContenido(false)} />}
         {/* ---------------- En uso ---------------- */}
         <div className="card">
           <div className="card__head">

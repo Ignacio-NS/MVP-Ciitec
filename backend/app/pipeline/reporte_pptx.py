@@ -1835,6 +1835,21 @@ def _pptx_a_pdf(data: bytes) -> bytes:
             return fh.read()
 
 
+def _quitar_paginas(prs, slides, contenido: dict) -> None:
+    """Saca de la presentación las páginas de la plantilla que el mando quitó del
+    SITREP (Motor de IA > Contenido del SITREP). Las hojas adicionales se conservan."""
+    from ..sitrep_paginas import excluidas_de, indices_pdf
+
+    quitar = {id(slides[i]._element) for i in indices_pdf(excluidas_de(contenido)) if i < len(slides)}
+    if not quitar:
+        return
+    lst = prs.slides._sldIdLst
+    for sld_id in list(lst):
+        if id(prs.part.related_part(sld_id.rId).slide._element) in quitar:
+            prs.part.drop_rel(sld_id.rId)
+            lst.remove(sld_id)
+
+
 def construir_pptx(contenido: dict[str, Any], fecha: datetime) -> bytes:
     """Rellena la plantilla, agrega las hojas adicionales del usuario y devuelve el .pptx."""
     prs = Presentation(_TEMPLATE)
@@ -1843,6 +1858,7 @@ def construir_pptx(contenido: dict[str, Any], fecha: datetime) -> bytes:
     _rellenar(slides, contenido, fecha)
     _graficos(prs, slides, contenido)
     _hojas_adicionales(prs, kit, contenido, _fecha_es(fecha), len(slides))
+    _quitar_paginas(prs, slides, contenido)
     buf = io.BytesIO()
     prs.save(buf)
     return buf.getvalue()

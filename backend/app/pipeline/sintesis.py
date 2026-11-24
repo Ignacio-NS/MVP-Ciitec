@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .. import sitrep_paginas
 from ..config import settings
 from ..llm import presupuesto
 from ..llm.provider import LLMProvider
@@ -93,8 +94,14 @@ def sintetizar(
     if fuente_ids:
         params["contexto_fuentes"] = contexto_fuentes(db, fuente_ids, max_chars=max_ctx, por_fuente=por_fuente)
 
+    # Páginas que el mando quitó del SITREP (Motor de IA > Contenido del SITREP).
+    excluidas = sitrep_paginas.excluidas_vigentes(db)
+    if excluidas:
+        params["paginas_excluidas"] = excluidas
+
     hechos_sel = _select_hechos(hechos, max_hechos)
     contenido = provider.sintetizar_briefing(_hechos_payload(hechos_sel), params)
+    sitrep_paginas.quitar(contenido, excluidas)
 
     # numero_version siguiente (append-only, RF-007)
     actual = db.execute(

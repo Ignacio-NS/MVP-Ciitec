@@ -14,6 +14,27 @@ const SECCIONES: { key: string; titulo: string; icon: string }[] = [
   { key: "logistica", titulo: "Logística", icon: "logistica" },
 ];
 
+// Páginas que el mando quitó del SITREP (Motor de IA > Contenido del SITREP).
+const TITULO_PAGINA: Record<string, string> = {
+  personal: "Personal",
+  inteligencia: "Inteligencia",
+  operaciones_despliegue: "Operaciones",
+  operaciones_terreno: "Operaciones en terreno",
+  logistica: "Logística",
+};
+function paginasExcluidas(c: any): string[] {
+  const e = c?.generacion?.paginas_excluidas;
+  return Array.isArray(e) ? e : [];
+}
+function seccionesVisibles(c: any) {
+  const ex = paginasExcluidas(c);
+  return SECCIONES.filter((s) =>
+    s.key === "operaciones"
+      ? !(ex.includes("operaciones_despliegue") && ex.includes("operaciones_terreno"))
+      : !ex.includes(s.key),
+  );
+}
+
 function descargar(blob: Blob, nombre: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -448,7 +469,7 @@ function EditorReporte({
         <div className="eyebrow" style={{ marginBottom: "var(--sp-3)" }}>
           Secciones institucionales
         </div>
-        {SECCIONES.map((s, i) => (
+        {seccionesVisibles(draft).map((s, i) => (
           <EdSeccion
             key={s.key}
             titulo={s.titulo}
@@ -912,7 +933,16 @@ export default function Briefing() {
               <div className="eyebrow" style={{ marginBottom: "var(--sp-3)" }}>
                 Secciones institucionales
               </div>
-              {SECCIONES.map((s, i) => (
+              {paginasExcluidas(c).length > 0 && (
+                <p className="hint" style={{ margin: "0 0 var(--sp-3)" }}>
+                  <Icon name="info" /> No entran en este SITREP:{" "}
+                  {paginasExcluidas(c)
+                    .map((k) => TITULO_PAGINA[k] || k)
+                    .join(", ")}
+                  .
+                </p>
+              )}
+              {seccionesVisibles(c).map((s, i) => (
                 <SeccionInstitucional
                   key={s.key}
                   titulo={s.titulo}

@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import desc, select, update
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, sitrep_paginas
 from ..auth import rbac
 from ..auth.deps import CurrentUser, get_current_user, require_roles
 from ..config import settings
@@ -31,7 +31,7 @@ from ..llm import ollama
 from ..llm import disponibilidad as disp
 from ..llm.provider import LLMError, listar_modelos, probar_conexion
 from ..models import LLMConfig, Usuario
-from ..schemas.api import LLMConfigIn, LLMDisponibilidadIn
+from ..schemas.api import LLMConfigIn, LLMDisponibilidadIn, SitrepPaginasIn
 
 router = APIRouter(prefix="/llm", tags=["motor-ia"])
 info_router = APIRouter(tags=["motor-ia"])
@@ -279,6 +279,48 @@ def _ajustes_de(body: LLMConfigIn | None, db: Session):
         except ConfigIAError as e:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
     return _validar(body, _clave_para(db, body))[1]
+
+
+# ---------------------------------------------------------------------------
+#  Contenido del SITREP: qué páginas de la plantilla entran
+# ---------------------------------------------------------------------------
+def _paginas_publico(db: Session, user: CurrentUser) -> dict[str, Any]:
+    estado = sitrep_paginas.leer(db)
+    return {
+        **estado,
+        "puede_editar": rbac.tiene_rol(user.roles, rbac.ROLES_CONFIG_IA) and estado["migracion_aplicada"],
+        "paginas": [
+            {"clave": p.clave, "numero": p.numero, "titulo": p.titulo, "descripcion": p.descripcion,
+             "obligatoria": p.obligatoria, "incluida": p.clave not in estado["excluidas"]}
+            for p in sitrep_paginas.PAGINAS
+        ],
+    }
+
+
+@router.get("/sitrep-paginas")
+def ver_paginas(user: CurrentUser = Depends(_ver), db: Session = Depends(get_db)):
+    return _paginas_publico(db, user)
+
+
+@router.put("/sitrep-paginas")
+def guardar_paginas(body: SitrepPaginasIn, user: CurrentUser = Depends(_editar), db: Session = Depends(get_db)):
+    if not sitrep_paginas.leer(db)["migracion_aplicada"]:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Falta aplicar la migración db/migrations/004_sitrep_paginas.sql en la base de datos.",
+        )
+    anterior = sitrep_paginas.excluidas_vigentes(db)
+    try:
+        excl = sitrep_paginas.guardar(db, body.excluidas, user.id)
+    except sitrep_paginas.PaginasError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
+    audit.registrar(
+        db, accion="CONFIG_IA", actor_id=user.id, entidad_tipo="sitrep_paginas", entidad_id=None,
+        detalle={"cambio": "PAGINAS_SITREP", "anterior_excluidas": anterior, "excluidas": excl},
+        commit=False,
+    )
+    db.commit()
+    return _paginas_publico(db, user)
 
 
 @router.post("/modelos")

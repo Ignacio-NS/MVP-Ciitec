@@ -45,6 +45,12 @@ class EditarVersionIn(BaseModel):
     comentario: str | None = None
 
 
+class SitrepPaginasIn(BaseModel):
+    """Páginas de la plantilla que se QUITAN del SITREP (claves de app/sitrep_paginas.py)."""
+
+    excluidas: list[str] = []
+
+
 class LLMConfigIn(BaseModel):
     """Configuración del motor de IA enviada desde la interfaz de administración.
 

@@ -209,3 +209,17 @@ class LLMConfig(Base):
     creado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
     creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     desactivado_en = Column(DateTime(timezone=True))
+
+
+class SitrepPaginas(Base):
+    """Páginas de la plantilla que entran en el SITREP (append-only, migración 004).
+
+    `excluidas`: claves de las páginas quitadas (ver app/sitrep_paginas.py)."""
+
+    __tablename__ = "sitrep_paginas"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    excluidas = Column(JSONB, nullable=False, default=list)
+    vigente = Column(Boolean, nullable=False, default=False)
+    creado_por = Column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
+    creado_en = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    desactivado_en = Column(DateTime(timezone=True))

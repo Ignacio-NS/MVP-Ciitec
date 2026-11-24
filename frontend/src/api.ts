@@ -103,6 +103,10 @@ export const api = {
   llmProveedores: () => request("/llm/proveedores"),
   llmConfig: () => request("/llm/config"),
   llmHistorial: () => request("/llm/historial"),
+  // Contenido del SITREP: qué páginas de la plantilla entran
+  sitrepPaginas: () => request("/llm/sitrep-paginas"),
+  sitrepPaginasGuardar: (excluidas: string[]) =>
+    request("/llm/sitrep-paginas", { method: "PUT", body: JSON.stringify({ excluidas }) }),
   llmProbar: (cfg?: any) =>
     request("/llm/probar", { method: "POST", body: cfg ? JSON.stringify(cfg) : undefined }),
   llmActivar: (cfg: any) => request("/llm/config", { method: "PUT", body: JSON.stringify(cfg) }),

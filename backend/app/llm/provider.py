@@ -454,14 +454,19 @@ class _ChatJSONProvider(LLMProvider):
         auto: si la ventana declarada es chica (< 32k) va directo por secciones; si no,
         intenta de una vez y, si el modelo no lo logra (JSON cortado o inválido), lo
         rehace por secciones. Así un modelo chico también entrega el SITREP."""
+        # Páginas que el mando quitó del SITREP (Motor de IA > Contenido del SITREP): no se
+        # piden a la IA. No viajan en el payload; se traducen a secciones/instrucción.
+        excl = list(parametros.get("paginas_excluidas") or [])
+        parametros = {k: v for k, v in parametros.items() if k != "paginas_excluidas"}
+        a_usar = tuple(s for s in secciones.SECCIONES if s.clave not in excl) if excl else None
         aj = getattr(self, "aj", None)
         modo = getattr(aj, "sintesis_modo", "completa") or "completa"
         if modo == "auto" and aj is not None and aj.context_tokens and aj.context_tokens < VENTANA_MIN_COMPLETA:
             modo = "secciones"
         if modo == "secciones":
-            return self.sintetizar_por_secciones(hechos, parametros)
+            return self.sintetizar_por_secciones(hechos, parametros, secciones_a_usar=a_usar)
         try:
-            return self._sintetizar_completa(hechos, parametros)
+            return self._sintetizar_completa(hechos, parametros, excl)
         except LLMError as e:
             if modo != "auto":
                 raise
@@ -469,7 +474,7 @@ class _ChatJSONProvider(LLMProvider):
                 "Síntesis completa falló con %s/%s (%s); se rehace por secciones", self.nombre, self.modelo, e
             )
             self._avisar("El modelo no entregó el SITREP de una vez; se redacta por secciones")
-            return self.sintetizar_por_secciones(hechos, parametros, respaldo=True)
+            return self.sintetizar_por_secciones(hechos, parametros, respaldo=True, secciones_a_usar=a_usar)
 
     def _avisar(self, texto: str) -> None:
         """Avance legible para la interfaz (lo conecta el worker); nunca detiene la síntesis."""
@@ -480,9 +485,14 @@ class _ChatJSONProvider(LLMProvider):
             except Exception:  # noqa: BLE001
                 pass
 
-    def _sintetizar_completa(self, hechos: list[dict[str, Any]], parametros: dict[str, Any]) -> dict[str, Any]:
+    def _sintetizar_completa(
+        self, hechos: list[dict[str, Any]], parametros: dict[str, Any], excluidas: list[str] | None = None,
+    ) -> dict[str, Any]:
+        from .. import sitrep_paginas
+
         payload = json.dumps({"hechos": hechos, "parametros": parametros}, ensure_ascii=False)
-        data = self._chat_json(_SYNTH_SYS, payload, operacion="sintesis")
+        sistema = _SYNTH_SYS + sitrep_paginas.instruccion(list(excluidas or []))
+        data = self._chat_json(sistema, payload, operacion="sintesis")
         try:
             out = BriefingOut.model_validate(data).model_dump()
         except ValidationError as e:

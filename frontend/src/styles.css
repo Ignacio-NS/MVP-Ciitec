@@ -646,3 +646,16 @@ button.trace-id:hover{border-color:var(--accent-border);color:var(--accent);back
 .qa-contra{display:flex;flex-direction:column;gap:var(--sp-3)}
 .qa-contra__item{padding-bottom:var(--sp-3);border-bottom:1px solid var(--border);font-size:var(--tx-sm);line-height:1.5}
 .qa-contra__item:last-child{border-bottom:0;padding-bottom:0}
+
+/* Contenido del SITREP (Motor de IA): páginas de la plantilla que entran */
+.sitrep-pags{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.sitrep-pag{display:flex;align-items:center;gap:var(--sp-3);padding:10px 14px;border-top:1px solid var(--border);transition:var(--speed)}
+.sitrep-pag:first-child{border-top:0}
+.sitrep-pag > svg{width:18px;height:18px;flex:none;color:var(--text-muted)}
+.sitrep-pag__num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;
+  font-size:var(--tx-sm);font-weight:600;background:var(--surface-3);color:var(--text-2)}
+.sitrep-pag__txt{flex:1;min-width:0}
+.sitrep-pag__tit{font-weight:600}
+.sitrep-pag.is-off .sitrep-pag__txt,.sitrep-pag.is-off > svg,.sitrep-pag.is-off .sitrep-pag__num{opacity:.45}
+.sitrep-pag.is-off .sitrep-pag__tit{text-decoration:line-through}
+.toggle:disabled{cursor:not-allowed;opacity:.6}

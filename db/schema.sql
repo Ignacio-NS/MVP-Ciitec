@@ -256,3 +256,18 @@ CREATE TABLE llm_config (
     desactivado_en   TIMESTAMPTZ
 );
 CREATE UNIQUE INDEX uq_llm_config_vigente ON llm_config (vigente) WHERE vigente;
+
+-- ---------------------------------------------------------------------
+--  Páginas de la plantilla que entran en el SITREP (append-only)
+--  Las elige el Administrador del Sistema en "Motor de IA". Sin fila
+--  vigente entran todas. Ver migración 004.
+-- ---------------------------------------------------------------------
+CREATE TABLE sitrep_paginas (
+    id               BIGSERIAL PRIMARY KEY,
+    excluidas        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    vigente          BOOLEAN NOT NULL DEFAULT false,
+    creado_por       UUID REFERENCES usuarios(id),
+    creado_en        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    desactivado_en   TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX uq_sitrep_paginas_vigente ON sitrep_paginas (vigente) WHERE vigente;
