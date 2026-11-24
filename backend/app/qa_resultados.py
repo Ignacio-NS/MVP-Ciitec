@@ -43,6 +43,25 @@ PRECIOS_USD_MTOK: dict[str, tuple[float, float]] = {
     "openai/gpt-5": (0.0, 0.0),               # GitHub Models (gratis)
 }
 USD_CLP = 984.09
+
+# Para qué está pensado cada modelo (se muestra en el panel y en el informe de QA).
+ESPECIALIDAD: dict[str, str] = {
+    "gemini-2.5-flash": "Rápido y económico, uso general",
+    "gemini-2.5-flash-lite": "El más barato de Google, tareas simples",
+    "gemini-3.5-flash-lite": "Muy rápido y barato, alto volumen",
+    "gemini-3.8-flash": "Flash con razonamiento, equilibrio velocidad/calidad",
+    "gemini-3.1-pro-preview": "Pro: razonamiento profundo y documentos largos",
+    "gemini-4-argon": "Insignia Gemini 4: razonamiento y análisis complejo",
+    "gemini-4-hydrogen": "Flash de Gemini 4: velocidad con calidad de última generación",
+    "deepseek-chat": "Conversación y redacción, muy barato",
+    "deepseek-flash": "Rápido y barato, buen manejo de cifras",
+    "deepseek-v4-pro": "Razonamiento paso a paso (piensa antes de responder)",
+    "openai/gpt-oss-20b": "Modelo abierto de OpenAI, liviano, en hardware Groq",
+    "openai/gpt-oss-120b": "Modelo abierto de OpenAI, grande, en hardware Groq (muy rápido)",
+    "qwen/qwen3.8-27b": "Modelo abierto de Alibaba: multilingüe y salida estructurada",
+    "claude-opus-5-5": "Insignia de Anthropic: redacción precisa y seguimiento de instrucciones",
+    "claude-sonnet-5-5": "Equilibrio calidad/costo de Anthropic, redacción y análisis",
+}
 PRECIOS_FECHA = "nov-2026"
 
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,120}__corrida\d{1,3}$")
@@ -210,7 +229,7 @@ def _no_disponibles() -> list[dict[str, Any]]:
     for et, r in ultimos.items():
         lote, nombre = _lote_y_nombre(et, None)
         out.append({"lote": lote, "motor": nombre, "proveedor": r.get("proveedor"), "modelo": r.get("modelo"),
-                    "estado": r.get("estado"), "error": (r.get("error") or "")[:300]})
+                    "especialidad": ESPECIALIDAD.get(r.get("modelo") or "", ""), "estado": r.get("estado"), "error": (r.get("error") or "")[:300]})
     return out
 
 
@@ -253,6 +272,7 @@ def listar() -> dict[str, Any]:
         prom = lambda k: round(mean(v for v in (c[k] for c in ok) if v is not None), 1) if any(c[k] is not None for c in ok) else None  # noqa: E731
         resumen.append({
             "lote": lote, "motor": motor, "proveedor": cs[0]["proveedor"], "modelo": cs[0]["modelo"],
+            "especialidad": ESPECIALIDAD.get(cs[0]["modelo"] or "", ""),
             "corridas": len(cs), "exitosas": len(ok),
             "tiempo_s": prom("tiempo_s"),
             "tiempo_min_s": min((c["tiempo_s"] for c in ok if c["tiempo_s"] is not None), default=None),

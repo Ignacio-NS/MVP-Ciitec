@@ -12,6 +12,7 @@ type Resumen = {
   motor: string;
   proveedor: string;
   modelo: string;
+  especialidad?: string;
   corridas: number;
   exitosas: number;
   tiempo_s: number | null;
@@ -166,6 +167,7 @@ export default function PruebasQA() {
                       <td>
                         <div className="cell-strong">{r.motor}</div>
                         <div className="hint mono">{r.modelo}</div>
+                        {r.especialidad && <div className="hint">{r.especialidad}</div>}
                       </td>
                       <td>
                         {r.exitosas}/{r.corridas} OK
@@ -196,6 +198,7 @@ export default function PruebasQA() {
                       <td>
                         <div className="cell-strong">{n.motor}</div>
                         <div className="hint mono">{n.modelo}</div>
+                        {n.especialidad && <div className="hint">{n.especialidad}</div>}
                       </td>
                       <td colSpan={6}>
                         <span className="pill" style={{ color: "var(--sec)", background: "var(--sec-bg)" }}>
